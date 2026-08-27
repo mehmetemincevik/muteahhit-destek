@@ -15,8 +15,9 @@ export enum CostPaymentMethod {
   OTHER = 'other',
 }
 
-// payments.entity.ts (units modülü) ile BİREBİR AYNI mantık -- sadece units yerine
-// cost_items'a bağlı. Bir maliyet kalemine yapılan her ödeme (avans, ara ödeme, kapanış) bir satır.
+// Bir maliyet kalemine yapılan her ödeme ayrı satırdır; kısmi ödeme birden çok kayıt
+// oluşturur. Bakiye cost_item_payment_summary view'ından hesaplanır, ayrı alanda tutulmaz.
+// Yapı payments tablosuyla aynı; orada bağlantı units, burada cost_items üzerinedir.
 @Entity('cost_payments')
 export class CostPayment {
   @PrimaryGeneratedColumn('uuid')

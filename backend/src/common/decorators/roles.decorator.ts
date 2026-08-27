@@ -2,7 +2,7 @@ import { SetMetadata } from '@nestjs/common';
 
 export const ROLES_KEY = 'roles';
 
-// Kullanımı: @Roles('contractor') ya da @Roles('contractor', 'craftsman')
-// Bir controller/metodun üzerine SADECE belirtilen rollerin erişebileceğini işaretler.
-// Hiç @Roles() yoksa, RolesGuard hiçbir kısıtlama uygulamaz (herkese açık kalır).
+// Bir controller veya metoda erişebilecek rolleri işaretler: @Roles('contractor').
+// İşaretlenmemiş uçlarda RolesGuard kısıtlama uygulamaz; rol kontrolü gereken her
+// uca açıkça eklenmelidir.
 export const Roles = (...roles: string[]) => SetMetadata(ROLES_KEY, roles);

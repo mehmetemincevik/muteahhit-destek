@@ -1,150 +1,158 @@
-# Müteahhitlik Takip Uygulaması — Backend
+# Müteahhitlik Takip — Backend API
 
-NestJS + PostgreSQL + TypeORM ile yazılmış backend API iskeleti.
+M�teahhitlerin proje, daire, tahsilat, maliyet ve nakit akışı süreçlerini yönettiği
+uygulamanın sunucu tarafı.
 
-## Bu İskelette Neler Var?
-
-**Tam çalışan (örnek) modüller:**
-- `auth` — kayıt, giriş, JWT token üretimi
-- `projects` — proje + arsa + arsa sahibi (hisseli) oluşturma, listeleme
-- `units` — blok/daire oluşturma, listeleme, durum güncelleme (satıldı/verildi/boşta)
-
-**Henüz yazılmadı (TODO, aynı desenle eklenecek):**
-`payments`, `costs`, `assets`, `cashflow`, `craftsmen`, `messaging`, `templates`
-— hepsinin veritabanı şeması `src/database/migrations/` içinde zaten hazır, sadece
-NestJS tarafı (entity + dto + service + controller) eklenmeyi bekliyor.
+**Stack:** NestJS 10 · TypeScript · PostgreSQL 16 · TypeORM · Passport (JWT)
 
 ---
 
-## Kurulum (İlk Kez Çalıştırma)
+## Modüller
 
-### 1) Gerekli Programlar
-- [Node.js LTS](https://nodejs.org/) (20.x veya üzeri)
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Postgres'i kolayca çalıştırmak için)
+| Modül | Kapsam |
+|---|---|
+| `auth` | Kayıt, giriş, JWT üretimi ve doğrulaması |
+| `projects` | Proje, arsa ve hisseli arsa sahipleri |
+| `units` | Blok, daire, alıcı; daire durum yönetimi |
+| `payments` | Daire tahsilatları, kalan bakiye |
+| `costs` | Maliyet kategorileri, kalemler, kısmi ödemeler |
+| `assets` | Nakit/emtia/mülk varlıkları, kira, merkezi hareket defteri |
+| `cashflow` | Vadeli gelir-gider takvimi, gecikme faizi tahakkuku |
+| `craftsmen` | Usta profili, hizmet paketleri, portfolyo, değerlendirmeler, proje atamaları |
+| `messaging` | Proje bağlamlı konuşmalar, teklif ve karşı teklif akışı |
+| `templates` | Hazır hizmet paketi şablonları (salt okunur) |
 
-### 2) Bağımlılıkları Kur
+---
+
+## Kurulum
+
+**Gereksinimler:** Node.js LTS, Docker (veya yerel PostgreSQL 16).
+
 ```bash
 npm install
-```
-
-### 3) Veritabanını Ayağa Kaldır
-```bash
-docker-compose up -d
-```
-Bu komut, bilgisayarına Postgres kurmadan, arka planda bir Postgres veritabanı başlatır.
-Durdurmak istersen: `docker-compose down`
-
-### 4) Ortam Değişkenlerini Ayarla
-```bash
+docker compose up -d          # postgres:16, port 5432
 cp .env.example .env
-```
-`.env.example`'daki varsayılan değerler docker-compose ile uyumlu, ilk çalıştırmada
-değiştirmene gerek yok. Sadece `JWT_SECRET`'i istersen kendi rastgele metninle değiştir.
-
-### 5) Veritabanı Şemasını Kur (Migration Çalıştır)
-```bash
 npm run migration:run
-```
-Bu komut, birlikte tasarladığımız tüm tabloları (`users`, `projects`, `units`,
-`payments`, `costs`, ... 8 modülün tamamı) veritabanında oluşturur.
-
-### 6) Sistem API Anahtarını Ayarla
-`.env` dosyandaki `SYSTEM_API_KEY` değerini production'a geçmeden önce **mutlaka**
-uzun, rastgele bir değerle değiştir.
-
-**Not:** Günlük faiz işletme artık **uygulamanın kendi zamanlayıcısı** ile otomatik
-çalışıyor (her gece 00:05, `@nestjs/schedule` kullanılarak) -- n8n'e ya da başka bir dış
-tetikleyiciye ihtiyaç YOK. `SYSTEM_API_KEY` sadece **manuel test/tekrar çalıştırma**
-istersen kullanılır:
-```
-POST http://sunucun/system/cashflow/run-daily-accrual
-Header: X-API-Key: <senin SYSTEM_API_KEY değerin>
+npm run start:dev             # http://localhost:3000
 ```
 
-### 7) Sunucuyu Başlat
-```bash
-npm run start:dev
-```
-Terminalde `Backend çalışıyor: http://localhost:3000` yazısını görmelisin.
-`--watch` modunda çalışır, yani bir dosyayı kaydettiğinde otomatik yeniden başlar.
+### Ortam değişkenleri
+
+| Değişken | Açıklama |
+|---|---|
+| `DB_HOST` · `DB_PORT` · `DB_USERNAME` · `DB_PASSWORD` · `DB_NAME` | Veritabanı bağlantısı |
+| `JWT_SECRET` | Token imzalama anahtarı |
+| `JWT_EXPIRES_IN` | Token ömrü (varsayılan `7d`) |
+| `SYSTEM_API_KEY` | Sistem uçlarının `X-API-Key` doğrulaması |
+| `PORT` | Uygulama portu (varsayılan 3000) |
+
+`JWT_SECRET` ve `SYSTEM_API_KEY` üretimde mutlaka değiştirilmeli.
 
 ---
 
-## Hızlı Test (Postman veya curl ile)
-
-### Kayıt Ol
-```bash
-curl -X POST http://localhost:3000/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "role": "contractor",
-    "fullName": "Ahmet Yılmaz",
-    "phone": "5551234567",
-    "password": "sifre123"
-  }'
-```
-Cevapta bir `accessToken` göreceksin — sonraki isteklerde bunu kullanacaksın.
-
-### Giriş Yap
-```bash
-curl -X POST http://localhost:3000/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"phone": "5551234567", "password": "sifre123"}'
-```
-
-### Proje Oluştur (token gerekli)
-```bash
-curl -X POST http://localhost:3000/projects \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer BURAYA_TOKEN_YAPISTIR" \
-  -d '{
-    "name": "Yeşiltepe Sitesi",
-    "province": "İstanbul",
-    "district": "Kadıköy",
-    "areaM2": 1200,
-    "isKatKarsiligi": true,
-    "owners": [
-      {"fullName": "Mehmet Arsa Sahibi", "sharePercentage": 60},
-      {"fullName": "Ayşe Arsa Sahibi", "sharePercentage": 40}
-    ]
-  }'
-```
-
----
-
-## Klasör Yapısı Mantığı
+## Mimari
 
 ```
 src/
-  main.ts                  -> uygulama giriş noktası
-  app.module.ts             -> tüm modüllerin birbirine bağlandığı yer
+  main.ts                   Global ValidationPipe, CORS
+  app.module.ts             Modül kayıtları, TypeORM, throttler, scheduler
   database/
-    data-source.ts          -> veritabanı bağlantı ayarları
-    migrations/              -> şema dosyalarımızın (01-08) TypeORM karşılığı
+    data-source.ts          TypeORM CLI yapılandırması
+    migrations/             Şema geçmişi
   common/
-    decorators/               -> @CurrentUser() gibi paylaşılan yardımcılar
-  modules/
-    auth/                       -> HER modül aynı iç yapıyı takip eder:
-      dto/                        - dto/        : gelen isteklerin şekli + doğrulama kuralları
-      guards/                     - entities/   : veritabanı tablosunun TS karşılığı
-      strategies/                 - *.service.ts: iş mantığı (veritabanı işlemleri burada)
-      auth.controller.ts          - *.controller.ts: HTTP endpoint tanımları (ince katman)
-      auth.module.ts              - *.module.ts : yukarıdakileri birbirine bağlar
-    projects/
-    units/
-    (buraya sırayla payments, costs, assets, cashflow, craftsmen, messaging, templates eklenecek)
+    decorators/             @CurrentUser, @Roles
+    guards/                 RolesGuard, ApiKeyGuard
+  modules/<modül>/
+    entities/               Tablo tanımları
+    dto/                    İstek şemaları ve doğrulama
+    *.service.ts            İş mantığı, yetki doğrulaması
+    *.controller.ts         Uç tanımları
+    *.module.ts             Bağımlılıklar
 ```
 
-## Yeni Bir Modül Eklerken İzlenecek Desen
+Her modül aynı yapıyı izler. Yeni modül eklerken mevcut bir modül (`payments` en sade
+örnek) şablon olarak alınabilir; modülün `app.module.ts` içinde kaydedilmesi gerekir.
 
-`projects` ve `units` modüllerini örnek al. Örneğin `payments` modülü eklerken:
+### Yetkilendirme
 
-1. `src/modules/payments/entities/payment.entity.ts` — `02_payments.sql`'deki `payments`
-   tablosunu TypeORM entity'sine çevir (units.entity.ts'e bak, aynı desen)
-2. `src/modules/payments/dto/create-payment.dto.ts` — hangi alanlar zorunlu/opsiyonel
-3. `src/modules/payments/payments.service.ts` — ödeme ekleme, listeleme, bakiye hesaplama
-4. `src/modules/payments/payments.controller.ts` — endpoint'ler
-5. `src/modules/payments/payments.module.ts` — yukarıdakileri bağla
-6. `app.module.ts`'deki `imports` listesine `PaymentsModule`'ü ekle
+İki ayrı mekanizma vardır:
 
-Bu adımların her birinde birlikte ilerleyebiliriz.
+- **Kullanıcı uçları:** `JwtAuthGuard` + `RolesGuard`. Rol kısıtı `@Roles('contractor')`
+  ile açıkça belirtilir; işaretlenmemiş uçlarda rol kontrolü uygulanmaz.
+- **Sistem uçları (`/system/*`):** `ApiKeyGuard`, `X-API-Key` header'ı bekler. Kullanıcı
+  oturumu geçerli değildir.
+
+Kaynak sahipliği servis katmanında doğrulanır. Proje sahipliği için `ProjectsService.
+findOneForContractor` ortak giriş noktasıdır; daire, maliyet ve ödeme servisleri
+sahipliği bu zincir üzerinden çözer.
+
+### Şema yönetimi
+
+`synchronize` kapalıdır. Şema değişiklikleri yalnızca migration ile yapılır; SQL
+karşılıkları `schema/` klasöründe tutulur ve migration dosyaları bu SQL'i uygular.
+
+```bash
+npm run migration:run       # bekleyen migration'ları uygula
+npm run migration:show      # durum
+npm run migration:revert    # son migration'ı geri al
+```
+
+Migration'ların `down()` metotları yazılmadı; geri alma elle yapılmalıdır.
+
+### Hesaplanan değerler
+
+Bakiye ve toplam gibi türetilmiş değerler kolonda tutulmaz, view'lardan okunur:
+
+| View | Kullanım |
+|---|---|
+| `unit_payment_summary` | Daire tahsilat bakiyesi |
+| `cost_item_payment_summary` | Maliyet kalemi ödeme durumu |
+| `project_cost_summary` | Proje maliyetlerinin kategori bazında toplamı |
+| `public_project_listings` | Ustalara açık proje ilanları (finansal alanlar hariç) |
+
+View'lar repository ile eşlenmez; parametreli ham sorgu ile okunur. Dönen alanlar
+snake_case, sayısal değerler string'dir.
+
+İstisna: `assets.currentValue` ve `craftsmanProfile.averageRating` performans nedeniyle
+kolonda tutulur ve ilgili servis tarafından yeniden hesaplanır.
+
+---
+
+## Zamanlanmış işler
+
+Gecikme faizi tahakkuku her gün 00:05'te çalışır (`CashflowService.handleDailyAccrualCron`).
+Aynı işlem manuel olarak da tetiklenebilir:
+
+```
+POST /system/cashflow/run-daily-accrual
+X-API-Key: <SYSTEM_API_KEY>
+```
+
+Faiz basit faizdir ve anapara üzerinden hesaplanır. Mükerrer tahakkuk
+`(calendar_entry_id, accrual_date)` benzersiz kısıtıyla engellenir; iş aynı gün içinde
+birden çok kez çalıştırılabilir.
+
+---
+
+## Bilinen sınırlamalar
+
+- **Token yenileme yok.** Süresi dolan token için yeniden giriş gerekir. Rol bilgisi
+  token içinden okunduğundan, rol değişikliği eski token süresi dolana kadar yansımaz.
+- **Hız sınırı ve zamanlayıcı tek instance varsayar.** Throttler sayacı bellekte tutulur;
+  zamanlanmış iş her instance'ta tetiklenir. Yatay ölçekleme için ortak store ve kilit gerekir.
+- **Bazı yazma işlemleri transaction dışında.** Ödeme kaydı ile defter kaydı ayrı
+  işlemlerde yazılıyor (`PaymentsService.create`, `CostsService.createCostPayment`);
+  ikincisi başarısız olursa defter eksik kalır.
+- **Maliyet kategorileri hesaplar arasında ortak.** `cost_categories` tablosunda
+  `contractor_id` yok.
+- **`asset_transactions` referansları polimorfik.** `sourceTable` + `sourceId` çifti
+  foreign key ile korunmuyor; kaynak kayıt silinirse defter satırı bağlantısız kalır.
+- **Değerlendirme doğrulaması kısmi.** `projectId` gönderilmezse ustayla çalışılmış olma
+  koşulu kontrol edilmiyor.
+- **CORS tüm kaynaklara açık.** Üretimde kısıtlanmalı.
+- **Dosya yükleme yok.** Portfolyo görselleri dış URL olarak saklanıyor.
+
+## Uçlar
+
+Route listesi uygulama başlatıldığında `RouterExplorer` günlüklerinde görülebilir.
+API dokümantasyonu (Swagger) henüz eklenmedi.

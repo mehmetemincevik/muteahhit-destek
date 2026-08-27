@@ -5,12 +5,12 @@ export class UpdateUnitStatusDto {
   @IsEnum(UnitOwnershipStatus)
   status: UnitOwnershipStatus;
 
-  // status='sold' iken zorunlu, diğer durumlarda gönderilmemeli
+  // status='sold' için zorunlu, diğer durumlarda yok sayılır
   @IsOptional()
   @IsUUID()
   buyerId?: string;
 
-  // status='given_to_land_owner' iken zorunlu, diğer durumlarda gönderilmemeli
+  // status='given_to_land_owner' için zorunlu, diğer durumlarda yok sayılır
   @IsOptional()
   @IsUUID()
   landOwnerId?: string;

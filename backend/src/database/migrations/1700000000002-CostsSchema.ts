@@ -1,7 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-// Bu migration, 03_costs.sql dosyasındaki şemayı olduğu gibi uygular.
-// Kaynak: proje planlama sürecinde birlikte tasarlanan 03_costs.sql
+// Kaynak: schema/03_costs.sql
 export class CostsSchema1700000000002 implements MigrationInterface {
   name = 'CostsSchema1700000000002';
 
@@ -40,13 +39,13 @@ CREATE TABLE cost_items (
                         CHECK (source IN ('manual', 'architectural_project', 'static_project')),
 
     -- Malzeme sınıfı bilgisi (demir S420 gibi) genel amaçlı JSON alanda tutulur,
-    -- her malzeme türü farklı özellik istediği için sabit kolon yerine esnek alan kullanıyoruz
+    -- her malzeme türü farklı özellik taşıdığı için sabit kolon yerine esnek alan
     extra_specs     JSONB,   -- örn: {"malzeme_sinifi": "S420", "kat": "Zemin"}
 
     incurred_date    DATE,   -- maliyetin oluştuğu/ödendiği tarih
     -- NOT: is_paid kaldırıldı -- cost_items KISMİ ÖDENEBİLİR (örn. demir siparişine önce avans,
     -- sonra kalan). Ödeme durumu artık aşağıdaki cost_payments tablosundan hesaplanır
-    -- (units/payments ile tamamen aynı mantık: bkz. cost_payment_summary view).
+    -- Bakiye cost_item_payment_summary view'ından hesaplanır.
     created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -94,9 +93,7 @@ GROUP BY ci.project_id, cc.cost_type, cc.name;
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    // NOT: down() metotları elle doldurulmalı (geri alma sırası ileri sıranın tersi olmalı,
-    // foreign key bağımlılıkları nedeniyle DROP TABLE sırası önemli). MVP aşamasında geri
-    // alma senaryosu genelde gerekmez, ama production'a geçmeden önce doldurulması önerilir.
-    throw new Error('Bu migration için down() henüz yazılmadı -- elle geri almanız gerekir.');
+    // TODO: Geri alma yazılmadı. DROP sırası foreign key bağımlılıklarının tersi olmalı.
+    throw new Error('down() tanımlı değil; geri alma elle yapılmalıdır.');
   }
 }

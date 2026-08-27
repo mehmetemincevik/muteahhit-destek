@@ -17,17 +17,21 @@ import { TemplatesModule } from './modules/templates/templates.module';
 
 @Module({
   imports: [
-    // .env dosyasını okuyup process.env üzerinden erişilebilir yapar, tüm modüllerde kullanılabilir
+    // .env değerlerini tüm modüllere açar.
     ConfigModule.forRoot({ isGlobal: true }),
 
-    // Genel istek sınırlama: varsayılan olarak bir IP, 60 saniyede en fazla 20 istek atabilir.
-    // Daha sıkı sınırlar (örn. login/register için) @Throttle() decorator'ıyla üzerine yazılır
-    // (bkz. auth.controller.ts).
+    // Varsayılan istek sınırı: IP başına 60 saniyede 20 istek.
+    // Uç bazında @Throttle() ile daraltılabilir (bkz. auth.controller.ts).
+    //
+    // Sınırlama: sayaç bellekte tutulur. Birden fazla instance çalıştırıldığında
+    // limit her instance için ayrı işler; ortak bir store (Redis) gerekir.
     ThrottlerModule.forRoot([{ name: 'default', ttl: 60000, limit: 20 }]),
 
-    // Uygulama içi zamanlayıcı -- n8n gibi dış bir araca ihtiyaç duymadan, @Cron() decorator'ı
-    // ile işaretlenmiş metotların (bkz. CashflowService.handleDailyAccrualCron) otomatik
-    // çalışmasını sağlar.
+    // @Cron() ile işaretli metotları çalıştırır (bkz. CashflowService.handleDailyAccrualCron).
+    //
+    // Sınırlama: zamanlanmış iş her instance'ta ayrı tetiklenir. Yatay ölçeklemede
+    // mükerrer çalışmayı önleyen bir kilit mekanizması gerekir. Faiz tahakkuku
+    // tarafında bu, benzersiz kısıt sayesinde zararsız (bkz. runDailyAccrual).
     ScheduleModule.forRoot(),
 
     TypeOrmModule.forRootAsync({
@@ -55,11 +59,10 @@ import { TemplatesModule } from './modules/templates/templates.module';
     CraftsmenModule,
     MessagingModule,
     TemplatesModule,
-    // Tüm 8 modül tamamlandı: Auth, Projects, Units, Payments, Costs, Assets,
-    // Cashflow, Craftsmen, Messaging, Templates.
+
   ],
   providers: [
-    // ThrottlerGuard'ı TÜM uygulamaya global olarak uygular (her endpoint istek sınırlamasına tabi)
+    // Hız sınırı global olarak uygulanır.
     { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })

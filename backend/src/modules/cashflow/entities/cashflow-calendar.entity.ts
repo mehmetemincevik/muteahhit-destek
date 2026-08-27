@@ -27,8 +27,9 @@ export enum CashflowStatus {
   OVERDUE = 'overdue',
 }
 
-// PLANLANAN/BEKLENEN hareketleri tutar. GERÇEKLEŞEN tahsilat/ödeme ayrı tablolardadır
-// (payments, rental_payments, asset_transactions) -- bkz. CashflowService.markAsPaid().
+// Planlanan gelir ve gider kayıtları. Gerçekleşen hareketler ayrı tablolarda tutulur
+// (payments, rental_payments, asset_transactions); dönüşüm CashflowService.markAsPaid()
+// içinde yapılır.
 @Entity('cashflow_calendar')
 export class CashflowCalendar {
   @PrimaryGeneratedColumn('uuid')
@@ -65,12 +66,16 @@ export class CashflowCalendar {
   @Column({ name: 'paid_date', type: 'date', nullable: true })
   paidDate?: Date;
 
-  // BASİT FAİZ: her gün eklenen faiz her zaman originalAmount üzerinden hesaplanır (bileşik değil).
-  // Varsayılan %0,14 = 0.0014. null bırakılırsa bu kayıt için hiç faiz işlemez.
+  // Günlük basit faiz oranı, ondalık olarak (%0,14 -> 0.0014). Faiz her gün anapara
+  // üzerinden hesaplanır, birikmiş tutar üzerinden değil.
+  // null bırakılırsa kayda faiz işlemez. Veritabanı varsayılanı 0.0014'tür; faiz
+  // istenmeyen kayıtlarda alan açıkça null gönderilmelidir.
   @Column({ name: 'daily_interest_rate', type: 'numeric', precision: 6, scale: 4, nullable: true })
   dailyInterestRate?: number;
 
-  // Polimorfik referans: installment_payment için 'units', rent için 'asset_rentals'
+  // Polimorfik referans; foreign key yoktur.
+  //   installment_payment -> units
+  //   rent                -> asset_rentals
   @Column({ name: 'source_table', type: 'varchar', length: 30, nullable: true })
   sourceTable?: string;
 

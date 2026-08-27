@@ -1,7 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-// Bu migration, 07_offers_messaging.sql dosyasındaki şemayı olduğu gibi uygular.
-// Kaynak: proje planlama sürecinde birlikte tasarlanan 07_offers_messaging.sql
+// Kaynak: schema/07_offers_messaging.sql
 export class OffersMessagingSchema1700000000006 implements MigrationInterface {
   name = 'OffersMessagingSchema1700000000006';
 
@@ -64,7 +63,7 @@ CREATE TABLE offers (
 
 -- ============================================
 -- İŞ AKIŞI MANTIĞI:
--- 1) Usta veya müteahhit bir 'offer' tipinde mesaj gönderir -> messages + offers satırı birlikte oluşur
+-- 1) Teklif gönderildiğinde messages ve offers kayıtları birlikte oluşur
 -- 2) Karşı taraf: kabul ederse status='accepted' olur VE otomatik olarak
 --    project_craftsman_assignments tablosunda yeni bir kayıt açılır (agreed_price = offers.amount)
 -- 3) Reddederse status='rejected'
@@ -76,9 +75,7 @@ CREATE TABLE offers (
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    // NOT: down() metotları elle doldurulmalı (geri alma sırası ileri sıranın tersi olmalı,
-    // foreign key bağımlılıkları nedeniyle DROP TABLE sırası önemli). MVP aşamasında geri
-    // alma senaryosu genelde gerekmez, ama production'a geçmeden önce doldurulması önerilir.
-    throw new Error('Bu migration için down() henüz yazılmadı -- elle geri almanız gerekir.');
+    // TODO: Geri alma yazılmadı. DROP sırası foreign key bağımlılıklarının tersi olmalı.
+    throw new Error('down() tanımlı değil; geri alma elle yapılmalıdır.');
   }
 }

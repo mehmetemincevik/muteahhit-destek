@@ -37,7 +37,7 @@ export class CostsService {
     private readonly projectsService: ProjectsService,
   ) {}
 
-  // --- Kategoriler: PAYLAŞILAN liste, yetki kontrolü gerekmiyor (herkes ekleyip görebilir) ---
+  // Kategoriler ortak listedir; sahiplik kontrolü uygulanmaz (bkz. CostCategory).
 
   async createCategory(dto: CreateCostCategoryDto): Promise<CostCategory> {
     const category = this.categoryRepo.create(dto);
@@ -48,14 +48,14 @@ export class CostsService {
     return this.categoryRepo.find({ order: { name: 'ASC' } });
   }
 
-  // --- Maliyet Kalemleri: projeye bağlı, yetki kontrolü ZORUNLU ---
+  // Maliyet kalemleri projeye bağlıdır; her işlemde proje sahipliği doğrulanır.
 
   async createCostItem(
     contractorId: string,
     projectId: string,
     dto: CreateCostItemDto,
   ): Promise<CostItem> {
-    // projectId elimizde doğrudan var -> ProjectsService üzerinden kontrol (createBlock'taki desen)
+    // projectId doğrudan mevcut; sahiplik ProjectsService üzerinden doğrulanır.
     await this.projectsService.findOneForContractor(projectId, contractorId);
 
     const category = await this.categoryRepo.findOne({ where: { id: dto.categoryId } });
@@ -87,7 +87,8 @@ export class CostsService {
     });
   }
 
-  // Proje geneli maliyet özeti (kategori bazında toplamlar) -- project_cost_summary view'ından
+  // Kategori bazında toplamlar. project_cost_summary bir view olduğu için repository
+  // yerine parametreli ham sorgu kullanılır.
   async getProjectCostSummary(
     contractorId: string,
     projectId: string,
@@ -101,8 +102,7 @@ export class CostsService {
 
   // --- Maliyet Ödemeleri: cost_item'a bağlı, yetki kontrolü zincir üzerinden ---
 
-  // costItemId elimizde var ama projectId yok -> chain üzerinden kontrol
-  // (units.service.ts'teki createUnit ile birebir aynı desen)
+  // Yalnızca costItemId bilindiğinde sahiplik, kalem -> proje ilişkisi üzerinden doğrulanır.
   private async assertCostItemOwnership(contractorId: string, costItemId: string): Promise<CostItem> {
     const costItem = await this.costItemRepo.findOne({
       where: { id: costItemId },
@@ -133,8 +133,7 @@ export class CostsService {
     });
     const saved = await this.costPaymentRepo.save(payment);
 
-    // Maliyet ödemesi bir ÇIKIŞ olduğu için tutar negatif işaretlenir (payments'taki
-    // unit_sale_payment pozitifti, burası tam tersi).
+    // Deftere çıkış olarak yazılır; tutar negatif işaretlenir.
     await this.assetTransactionRepo.save(
       this.assetTransactionRepo.create({
         contractorId,

@@ -1,7 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-// Bu migration, 01_core.sql dosyasındaki şemayı olduğu gibi uygular.
-// Kaynak: proje planlama sürecinde birlikte tasarlanan 01_core.sql
+// Kaynak: schema/01_core.sql
 export class CoreSchema1700000000000 implements MigrationInterface {
   name = 'CoreSchema1700000000000';
 
@@ -116,7 +115,7 @@ CREATE TABLE units (
     net_m2              NUMERIC(8,2),
 
     -- Durum: boşta / satıldı / arsa sahibine verildi -- ikisi aynı anda olabileceği için
-    -- ayrı iki boolean + bağımsız fark ödeme mantığı kullanıyoruz (aşağıya bkz.)
+    -- ownership_status tek durum tutar; fark ödemeleri unit_adjustments tablosunda ayrıca izlenir.
     ownership_status    VARCHAR(30) NOT NULL DEFAULT 'available'
                             CHECK (ownership_status IN ('available', 'sold', 'given_to_land_owner')),
 
@@ -194,9 +193,7 @@ CREATE TABLE unit_adjustments (
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    // NOT: down() metotları elle doldurulmalı (geri alma sırası ileri sıranın tersi olmalı,
-    // foreign key bağımlılıkları nedeniyle DROP TABLE sırası önemli). MVP aşamasında geri
-    // alma senaryosu genelde gerekmez, ama production'a geçmeden önce doldurulması önerilir.
-    throw new Error('Bu migration için down() henüz yazılmadı -- elle geri almanız gerekir.');
+    // TODO: Geri alma yazılmadı. DROP sırası foreign key bağımlılıklarının tersi olmalı.
+    throw new Error('down() tanımlı değil; geri alma elle yapılmalıdır.');
   }
 }

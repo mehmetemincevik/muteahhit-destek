@@ -11,8 +11,8 @@ import { Project } from '../../projects/entities/project.entity';
 import { CraftsmanProfile } from '../../craftsmen/entities/craftsman-profile.entity';
 import { User } from '../../users/entities/user.entity';
 
-// Bir konuşma HER ZAMAN bir proje + bir usta + o projenin müteahhidi üçlüsüne bağlı.
-// Proje bağlamı olmadan serbest mesajlaşma YOK.
+// Konuşmalar proje bağlamına bağlıdır; proje dışı serbest mesajlaşma desteklenmez.
+// (projectId, craftsmanId) benzersizdir: aynı proje ve usta için tek hat açılır.
 @Entity('conversations')
 @Unique(['projectId', 'craftsmanId']) // bu proje-usta ikilisi için tek bir konuşma hattı
 export class Conversation {

@@ -1,8 +1,11 @@
 import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
 import { UserRole } from '../../users/entities/user.entity';
 
-// DTO (Data Transfer Object) = dışarıdan gelen isteğin şeklini ve kurallarını tanımlar.
-// class-validator decorator'ları sayesinde main.ts'teki ValidationPipe bunu otomatik kontrol eder.
+// Kayıt isteğinin gövde şeması. Doğrulama main.ts'teki global ValidationPipe
+// tarafından uygulanır.
+//
+// Sınırlama: telefon numarası biçim doğrulamasından geçmiyor, yalnızca boş olmaması
+// kontrol ediliyor. Benzersizlik kontrolü servis katmanında yapılır.
 export class RegisterDto {
   @IsEnum(UserRole, { message: 'role sadece "contractor" veya "craftsman" olabilir' })
   role: UserRole;

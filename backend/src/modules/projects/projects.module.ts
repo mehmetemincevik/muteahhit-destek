@@ -10,6 +10,6 @@ import { ProjectsController } from './projects.controller';
   imports: [TypeOrmModule.forFeature([Project, Land, LandOwner])],
   controllers: [ProjectsController],
   providers: [ProjectsService],
-  exports: [ProjectsService], // diğer modüller (örn. units) ProjectsService'i kullanabilsin diye
+  exports: [ProjectsService], // proje sahipliği doğrulaması için diğer modüllerde kullanılıyor
 })
 export class ProjectsModule {}

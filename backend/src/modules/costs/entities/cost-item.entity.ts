@@ -53,9 +53,11 @@ export class CostItem {
   @Column({ type: 'varchar', length: 20, default: CostSource.MANUAL })
   source: CostSource;
 
-  // JSONB -- serbest formatlı, önceden şekli belli olmayan veri. TypeScript tarafında
-  // en genel tip olan Record<string, any> kullanıyoruz: "herhangi bir key-value nesnesi"
-  // demek. Örn: { malzeme_sinifi: "S420", kat: "Zemin" }
+  // Malzeme türüne göre değişen ek özellikler (örn. { malzeme_sinifi: "S420", kat: "Zemin" }).
+  // Her kalem türü için ayrı kolon açmamak adına JSONB kullanılıyor.
+  //
+  // İçerik doğrulanmaz ve indekslenmez; bu alana göre filtreleme gerekirse GIN indeksi
+  // veya ayrı kolon değerlendirilmeli.
   @Column({ name: 'extra_specs', type: 'jsonb', nullable: true })
   extraSpecs?: Record<string, any>;
 

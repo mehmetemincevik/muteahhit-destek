@@ -26,7 +26,7 @@ export class UnitsService {
     return this.buyerRepo.save(buyer);
   }
 
-  // Sadece giriş yapan müteahhidin KENDİ alıcıları -- başkasınınkiler görünmez
+  // Alıcılar müteahhide özeldir; kişisel veri içerdiği için diğer hesaplara kapalıdır.
   async findBuyers(contractorId: string): Promise<Buyer[]> {
     return this.buyerRepo.find({
       where: { contractorId },
@@ -35,7 +35,7 @@ export class UnitsService {
   }
 
   async createBlock(contractorId: string, projectId: string, dto: CreateBlockDto): Promise<Block> {
-    // Bu projenin gerçekten bu müteahhide ait olduğunu doğrular (yoksa NotFound/Forbidden fırlatır)
+    // Sahiplik doğrulaması; başarısızsa NotFound veya Forbidden fırlatır.
     await this.projectsService.findOneForContractor(projectId, contractorId);
 
     const block = this.blockRepo.create({ projectId, name: dto.name, floorCount: dto.floorCount });
@@ -63,10 +63,12 @@ export class UnitsService {
     return this.unitRepo.save(unit);
   }
 
-  // Durum güncelleme: SQL'deki CHECK constraint ile aynı kuralı burada da uyguluyoruz.
-  // Neden ikisi de var? Veritabanı son savunma hattı (asla bozuk veri girmesin), ama kullanıcıya
-  // "constraint violation" gibi teknik bir hata yerine anlamlı bir mesaj göstermek için
-  // servis katmanında da aynı kontrolü baştan yapıyoruz.
+  // Durum ile ilişki alanları arasındaki tutarlılık hem burada hem de veritabanındaki
+  // CHECK constraint ile doğrulanır. Servis katmanı okunur hata mesajı üretmek,
+  // constraint ise son savunma hattı olarak bozuk veriyi engellemek için var.
+  //
+  // Durum değişiminde eski referans temizlenir; aksi halde iki alan aynı anda dolu
+  // kalır ve constraint ihlali oluşur.
   async updateStatus(
     contractorId: string,
     unitId: string,
@@ -87,9 +89,8 @@ export class UnitsService {
       throw new BadRequestException('Arsa sahibine verildi durumunda landOwnerId zorunludur');
     }
 
-    // GÜVENLİK: verilen alıcının gerçekten BU müteahhide ait olduğunu doğrula.
-    // Bu kontrol olmasa, bir müteahhit başka birinin alıcı ID'sini kendi dairesine
-    // bağlayabilirdi (ID'yi bir şekilde ele geçirirse).
+    // Alıcı sahipliği doğrulanır. Aksi halde ele geçirilen bir alıcı ID'si başka bir
+    // hesabın dairesine bağlanabilir.
     if (dto.buyerId) {
       const buyer = await this.buyerRepo.findOne({ where: { id: dto.buyerId } });
       if (!buyer || buyer.contractorId !== contractorId) {

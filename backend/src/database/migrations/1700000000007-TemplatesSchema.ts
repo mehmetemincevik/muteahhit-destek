@@ -1,7 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-// Bu migration, 08_templates.sql dosyasındaki şemayı olduğu gibi uygular.
-// Kaynak: proje planlama sürecinde birlikte tasarlanan 08_templates.sql
+// Kaynak: schema/08_templates.sql
 export class TemplatesSchema1700000000007 implements MigrationInterface {
   name = 'TemplatesSchema1700000000007';
 
@@ -14,7 +13,7 @@ export class TemplatesSchema1700000000007 implements MigrationInterface {
 
 -- Şablon paketler -- usta bunlardan birini seçip kendi craftsman_service_packages
 -- kaydını buradan türetebilir (fiyatları kendine göre girer), ya da hiç kullanmayıp
--- sıfırdan kendi paketini kurabilir (Modül 6'da zaten özgür bırakmıştık).
+-- sıfırdan kendi paketini de oluşturabilir.
 CREATE TABLE service_package_templates (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name            VARCHAR(200) NOT NULL,
@@ -35,7 +34,7 @@ CREATE TABLE service_package_template_items (
     created_at         TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Modül 6'da bırakılan template_id referansını şimdi bağlıyoruz
+-- craftsman_service_packages.template_id referansı
 ALTER TABLE craftsman_service_packages ADD CONSTRAINT fk_package_template
     FOREIGN KEY (template_id) REFERENCES service_package_templates(id);
 
@@ -84,9 +83,7 @@ INSERT INTO service_package_template_items (template_id, item_name, default_pric
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    // NOT: down() metotları elle doldurulmalı (geri alma sırası ileri sıranın tersi olmalı,
-    // foreign key bağımlılıkları nedeniyle DROP TABLE sırası önemli). MVP aşamasında geri
-    // alma senaryosu genelde gerekmez, ama production'a geçmeden önce doldurulması önerilir.
-    throw new Error('Bu migration için down() henüz yazılmadı -- elle geri almanız gerekir.');
+    // TODO: Geri alma yazılmadı. DROP sırası foreign key bağımlılıklarının tersi olmalı.
+    throw new Error('down() tanımlı değil; geri alma elle yapılmalıdır.');
   }
 }

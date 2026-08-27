@@ -17,9 +17,11 @@ export enum AssetTransactionType {
   COST_PAYMENT = 'cost_payment',
 }
 
-// Tüm varlık hareketlerinin (para girişi/çıkışı) tek merkezi log'u. PaymentsService ve
-// CostsService de bu tabloya (kendi entity import'larıyla) yazıyor -- bkz. o servislerdeki
-// asset_transactions ekleme adımları.
+// Tüm para hareketlerinin merkezi defteri. AssetsService dışında PaymentsService,
+// CostsService ve CashflowService de bu tabloya yazar.
+//
+// Kaynak kayda referans sourceTable + sourceId ile tutulur; foreign key yoktur.
+// Kaynak kayıt silinirse defter satırı bağlantısız kalır.
 @Entity('asset_transactions')
 export class AssetTransaction {
   @PrimaryGeneratedColumn('uuid')
@@ -32,8 +34,8 @@ export class AssetTransaction {
   @JoinColumn({ name: 'contractor_id' })
   contractor: User;
 
-  // 'unit_sale_payment'/'cost_payment' için genelde NULL (belirli bir isimli varlığa değil,
-  // genel deftere düşer). 'manual_addition'/'manual_deduction' için ZORUNLU.
+  // manual_addition / manual_deduction için doludur. unit_sale_payment ve cost_payment
+  // kayıtları genel deftere düştüğü için boş kalır.
   @Column({ name: 'asset_id', type: 'uuid', nullable: true })
   assetId?: string;
 

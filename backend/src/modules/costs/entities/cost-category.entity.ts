@@ -1,14 +1,16 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
 
 export enum CostType {
-  FIXED = 'fixed', // statik maliyet (arsa bedeli, ruhsat harcı gibi tek seferlik/sabit)
-  VARIABLE = 'variable', // değişken maliyet (malzeme fiyatı piyasaya göre dalgalanan)
+  FIXED = 'fixed', // baştan belli, tek seferlik kalemler (arsa bedeli, harç)
+  VARIABLE = 'variable', // piyasa fiyatına bağlı kalemler (beton, demir)
 }
 
-// NOT: Bu tablo proje/müteahhide ÖZEL değil -- SQL şemasında contractor_id/project_id
-// hiç yok, bilerek. Kategoriler (örn. "Beton", "Demir", "Elektrik Malzeme") TÜM
-// müteahhitlerin ortak kullandığı, paylaşılan bir liste. Herkes yeni kategori ekleyebilir,
-// ama var olan bir kategori herkese görünür (tıpkı service_package_templates gibi).
+// Kategoriler tüm hesaplar arasında ortaktır; tabloda contractor_id yok. Bir kullanıcının
+// eklediği kategori diğerlerine de görünür.
+//
+// TODO: Kategori listesinin hesaba özel mi yoksa ortak mı olacağı netleştirilmeli.
+// Ortak kalacaksa yeni kayıt eklemeyi kısıtlamak (yalnızca sistem varsayılanları),
+// hesaba özel olacaksa contractor_id eklemek gerekiyor.
 @Entity('cost_categories')
 export class CostCategory {
   @PrimaryGeneratedColumn('uuid')

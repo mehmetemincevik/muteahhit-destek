@@ -19,7 +19,7 @@ type AuthUser = { userId: string; role: string };
 export class CraftsmenController {
   constructor(private readonly craftsmenService: CraftsmenService) {}
 
-  // --- Profil (SADECE usta kendi profilini yönetir) ---
+  // Profil: usta yalnızca kendi kaydını yönetir.
 
   @Post('craftsmen/profile')
   @Roles('craftsman')
@@ -33,7 +33,7 @@ export class CraftsmenController {
     return this.craftsmenService.getMyProfile(user.userId);
   }
 
-  // --- Genel Arama (SADECE müteahhitler usta arar) ---
+  // Usta arama ve profil görüntüleme.
 
   @Get('craftsmen')
   @Roles('contractor')
@@ -41,7 +41,8 @@ export class CraftsmenController {
     return this.craftsmenService.findAllProfiles({ province, district });
   }
 
-  // ÖNEMLİ: sabit route'lar parametreli route'lardan ÖNCE tanımlanmalı (bkz. önceki hata).
+  // Sabit segmentli route'lar parametreli olanlardan önce tanımlanmalı; aksi halde
+  // ':craftsmanId' bu yolu da yakalar ve 'my-assignments' ID olarak yorumlanır.
   @Get('craftsmen/my-assignments')
   @Roles('craftsman')
   findMyAssignments(@CurrentUser() user: AuthUser) {
@@ -54,7 +55,7 @@ export class CraftsmenController {
     return this.craftsmenService.getProfileDetail(craftsmanId);
   }
 
-  // --- Hizmet Paketleri (SADECE usta kendi paketini yönetir) ---
+  // Hizmet paketleri: usta yalnızca kendi paketlerini düzenler.
 
   @Post('craftsmen/packages')
   @Roles('craftsman')
@@ -72,7 +73,7 @@ export class CraftsmenController {
     return this.craftsmenService.addPackageItem(user.userId, packageId, dto);
   }
 
-  // --- Portfolyo (SADECE usta) ---
+  // Portfolyo görselleri.
 
   @Post('craftsmen/portfolio')
   @Roles('craftsman')
@@ -80,7 +81,7 @@ export class CraftsmenController {
     return this.craftsmenService.addPortfolioImage(user.userId, dto);
   }
 
-  // --- Yorumlar (SADECE müteahhit ustayı değerlendirir) ---
+  // Değerlendirmeler: yalnızca müteahhit yazar.
 
   @Post('craftsmen/reviews')
   @Roles('contractor')
@@ -88,7 +89,7 @@ export class CraftsmenController {
     return this.craftsmenService.createReview(user.userId, dto);
   }
 
-  // --- Proje Atamaları (SADECE müteahhit yönetir) ---
+  // Proje atamaları.
 
   @Post('projects/:projectId/assignments')
   @Roles('contractor')

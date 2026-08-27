@@ -14,7 +14,7 @@ import { CraftsmenModule } from '../craftsmen/craftsmen.module';
   imports: [
     TypeOrmModule.forFeature([Conversation, Message, Offer, CraftsmanProfile, Project]),
     ProjectsModule,
-    CraftsmenModule, // CraftsmenService.createAssignment (teklif kabul edildiğinde) için
+    CraftsmenModule, // teklif kabulünde atama oluşturmak için
   ],
   controllers: [MessagingController],
   providers: [MessagingService],

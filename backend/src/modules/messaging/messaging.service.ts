@@ -27,8 +27,8 @@ export class MessagingService {
     private readonly craftsmenService: CraftsmenService,
   ) {}
 
-  // Bir kullanıcının bu konuşmanın gerçekten TARAFI olduğunu doğrular (iki farklı rol
-  // olduğu için kontrol de iki yönlü: contractorId eşleşmesi VEYA craftsman.userId eşleşmesi).
+  // Konuşmanın tarafı olma kontrolü. Müteahhit tarafında contractorId, usta tarafında
+  // craftsman.userId eşleşmesi aranır.
   private async assertParticipant(user: AuthUser, conversationId: string): Promise<Conversation> {
     const conversation = await this.conversationRepo.findOne({
       where: { id: conversationId },
@@ -48,8 +48,7 @@ export class MessagingService {
     return conversation;
   }
 
-  // FIND-OR-CREATE deseni: varsa mevcut konuşmayı döndürür, yoksa yenisini oluşturur
-  // (upsert'ten farklı -- var olan kaydı hiç güncellemiyoruz, sadece buluyor ya da yaratıyoruz).
+  // Mevcut konuşma varsa döner, yoksa oluşturur. Var olan kayıt güncellenmez.
   async startOrGetConversation(user: AuthUser, dto: StartConversationDto): Promise<Conversation> {
     const existing = await this.conversationRepo.findOne({
       where: { projectId: dto.projectId, craftsmanId: dto.craftsmanId },
@@ -59,21 +58,20 @@ export class MessagingService {
       return existing;
     }
 
-    // Konuşma henüz yok -> yeni oluşturulacak, role göre farklı doğrulama gerekiyor
+    // Yeni konuşma; doğrulama başlatan tarafın rolüne göre değişir.
     const project = await this.projectRepo.findOne({ where: { id: dto.projectId } });
     if (!project) {
       throw new NotFoundException('Proje bulunamadı');
     }
 
     if (user.role === 'contractor') {
-      // Müteahhit başlatıyor -> kendi projesi olmalı
+      // Müteahhit yalnızca kendi projesinde konuşma açabilir.
       if (project.contractorId !== user.userId) {
         throw new ForbiddenException('Bu proje size ait değil');
       }
     } else {
-      // Usta başlatıyor -> (a) belirttiği craftsmanId gerçekten kendi profili olmalı,
-      // (b) proje AÇIK (is_public) olmalı -- kapalı bir proje hakkında usta bilgi sahibi
-      // olamamalı, dolayısıyla ona konuşma da başlatamamalı.
+      // Usta yalnızca kendi profili adına ve açık ilanı olan projelerde konuşma açabilir.
+      // Kapalı projeler usta tarafından görülemediği için erişim de engellenir.
       const ownProfile = await this.craftsmanProfileRepo.findOne({ where: { userId: user.userId } });
       if (!ownProfile || ownProfile.id !== dto.craftsmanId) {
         throw new ForbiddenException('Sadece kendi profiliniz adına konuşma başlatabilirsiniz');
@@ -108,13 +106,12 @@ export class MessagingService {
     });
   }
 
-  // --- Mesajlar ---
+  // Mesajlar.
 
   async getMessages(user: AuthUser, conversationId: string): Promise<Message[]> {
     await this.assertParticipant(user, conversationId);
 
-    // Diğer tarafın gönderdiği, henüz okunmamış mesajları "okundu" olarak işaretle
-    // (klasik mesajlaşma uygulaması davranışı -- konuşmayı açan taraf mesajları okumuş sayılır).
+    // Konuşma görüntülendiğinde karşı tarafın okunmamış mesajları okundu işaretlenir.
     await this.messageRepo
       .createQueryBuilder()
       .update(Message)
@@ -145,7 +142,7 @@ export class MessagingService {
     return saved;
   }
 
-  // --- Teklifler ---
+  // Teklifler. Her teklif, akışta görünmesi için bir mesaj kaydıyla birlikte oluşturulur.
 
   async sendOffer(user: AuthUser, conversationId: string, dto: SendOfferDto): Promise<Offer> {
     await this.assertParticipant(user, conversationId);
@@ -182,7 +179,7 @@ export class MessagingService {
     return offer;
   }
 
-  // Kendi gönderdiğin teklifi kendin kabul/red edemezsin -- karşı taraf yanıtlamalı
+  // Teklifi yalnızca karşı taraf yanıtlayabilir.
   private assertNotOwnOffer(user: AuthUser, offer: Offer): void {
     const senderRoleMatches =
       (offer.senderRole === OfferSenderRole.CONTRACTOR && user.role === 'contractor') ||
@@ -205,10 +202,8 @@ export class MessagingService {
     offer.respondedAt = new Date();
     const saved = await this.offerRepo.save(offer);
 
-    // Kabul edilen teklif -> otomatik olarak proje-usta ataması oluşturulur.
-    // CraftsmenService.createAssignment ZATEN yetki kontrolü yapıyor (contractorId ile),
-    // biz burada conversation.contractorId'yi kullanıyoruz (kabul eden kim olursa olsun,
-    // atama her zaman projenin GERÇEK müteahhidi adına oluşur).
+    // Kabul edilen teklif proje-usta ataması oluşturur. Atama, teklifi kim kabul ederse
+    // etsin projenin müteahhidi adına açılır.
     await this.craftsmenService.createAssignment(
       offer.conversation.contractorId,
       offer.conversation.projectId,
@@ -245,12 +240,12 @@ export class MessagingService {
       throw new BadRequestException('Bu teklif zaten yanıtlanmış');
     }
 
-    // Eski teklifi 'countered' olarak işaretle
+    // Karşılık verilen teklif kapatılır.
     originalOffer.status = OfferStatus.COUNTERED;
     originalOffer.respondedAt = new Date();
     await this.offerRepo.save(originalOffer);
 
-    // Yeni bir teklif oluştur (yanıtlayan kişi adına), eskisine bağla
+    // Yeni teklif, countersOfferId ile öncekine bağlanır.
     const message = this.messageRepo.create({
       conversationId: originalOffer.conversationId,
       senderId: user.userId,

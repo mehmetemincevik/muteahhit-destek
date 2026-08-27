@@ -24,9 +24,7 @@ export class PaymentsService {
     @InjectDataSource() private readonly dataSource: DataSource,
   ) {}
 
-  // Aynı desen: önce bu dairenin gerçekten bu müteahhide ait olduğunu doğrula.
-  // units.service.ts'teki updateStatus ile birebir aynı yaklaşım (relations üzerinden
-  // block -> project zincirini takip ederek).
+  // Sahiplik, daire -> blok -> proje ilişkisi üzerinden doğrulanır.
   private async assertUnitOwnership(contractorId: string, unitId: string): Promise<Unit> {
     const unit = await this.unitRepo.findOne({
       where: { id: unitId },
@@ -53,10 +51,11 @@ export class PaymentsService {
     });
     const saved = await this.paymentRepo.save(payment);
 
-    // TODO artık tamamlandı: her ödeme, genel deftere (asset_transactions) otomatik düşer.
-    // asset_id bilerek NULL bırakılıyor -- bu, belirli bir isimli varlığa (örn. "Vakıfbank
-    // Hesabı") değil, genel bir gelir kaydına karşılık geliyor. Kullanıcı isterse ayrıca bu
-    // parayı Varlıklar modülünden belirli bir nakit varlığa manuel olarak da ekleyebilir.
+    // Ödeme, genel deftere (asset_transactions) gelir olarak yazılır. assetId boş
+    // bırakılır: kayıt belirli bir nakit hesabına değil, genel deftere düşer.
+    //
+    // Sınırlama: ödeme kaydı ile defter kaydı ayrı işlemlerde yazılıyor. İkincisi
+    // başarısız olursa defter eksik kalır; iki yazma tek transaction'a alınmalı.
     await this.assetTransactionRepo.save(
       this.assetTransactionRepo.create({
         contractorId,
@@ -79,9 +78,8 @@ export class PaymentsService {
     });
   }
 
-  // unit_payment_summary bir VIEW -- normal bir entity/tablo değil, bu yüzden Repository
-  // deseni yerine doğrudan SQL sorgusu çalıştırıyoruz. dataSource.query(), parametreleri
-  // ($1 gibi) güvenli şekilde (SQL injection riski olmadan) yerleştirir.
+  // unit_payment_summary bir view olduğu için repository yerine parametreli ham sorgu
+  // kullanılır. Dönen alanlar snake_case ve numeric değerler string'dir.
   async getBalance(contractorId: string, unitId: string): Promise<UnitPaymentSummary> {
     await this.assertUnitOwnership(contractorId, unitId);
 
@@ -90,8 +88,8 @@ export class PaymentsService {
       [unitId],
     );
 
-    // View, o daireye ait hiç veri olmasa bile (LEFT JOIN sayesinde) bir satır döner,
-    // bu yüzden burada "bulunamadı" durumu normalde oluşmaz -- yine de güvenlik amaçlı kontrol.
+    // View LEFT JOIN kullandığı için hiç ödeme olmasa da satır döner; boş sonuç
+    // yalnızca daire silinmişse oluşur.
     if (!rows.length) {
       throw new NotFoundException('Bu daire için bakiye bilgisi bulunamadı');
     }

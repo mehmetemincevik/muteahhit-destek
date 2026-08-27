@@ -5,17 +5,17 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Gelen her istekte DTO'lardaki class-validator kurallarını otomatik uygular
-  // (örn. email formatı yanlışsa, zorunlu alan boşsa otomatik 400 hatası döner)
+  // DTO doğrulaması tüm uçlarda otomatik uygulanır.
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // DTO'da tanımlı olmayan alanları isteklerden otomatik siler (güvenlik)
+      whitelist: true, // DTO'da tanımsız alanları gövdeden ayıklar
       forbidNonWhitelisted: true,
       transform: true,
     }),
   );
 
-  app.enableCors(); // Mobil uygulamanın API'ye erişebilmesi için
+  // TODO: CORS şu an tüm kaynaklara açık. Üretimde origin listesi kısıtlanmalı.
+  app.enableCors();
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port);

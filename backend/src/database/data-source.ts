@@ -4,9 +4,9 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
-// Bu dosya iki amaçla kullanılır:
-// 1) migration:run / migration:revert komutları bunu okuyarak veritabanına bağlanır
-// 2) app.module.ts içindeki TypeOrmModule de benzer ayarları (env üzerinden) kullanır
+// TypeORM CLI yapılandırması. migration:run / migration:revert / migration:show
+// komutları bu dosyadan bağlantı bilgisini okur.
+// Uygulama çalışma zamanı bağlantısı ayrı tanımlıdır (app.module.ts).
 export const AppDataSource = new DataSource({
   type: 'postgres',
   host: process.env.DB_HOST || 'localhost',
@@ -15,15 +15,15 @@ export const AppDataSource = new DataSource({
   password: process.env.DB_PASSWORD || 'postgres',
   database: process.env.DB_NAME || 'muteahhit_db',
 
-  // Entity dosyalarını otomatik bulur (her modülün entities/ klasörü)
+  // Modül klasörlerindeki entity dosyaları desen ile taranır.
   entities: ['src/modules/**/entities/*.entity.ts'],
 
-  // Migration dosyalarını otomatik bulur (şemamızı buraya SQL olarak taşıyacağız)
+  // Migration dosyaları
   migrations: ['src/database/migrations/*.ts'],
 
-  // ÖNEMLİ: synchronize HER ZAMAN false kalmalı. true olursa TypeORM entity'lere bakıp
-  // veritabanını "kendi kafasına göre" değiştirir -- elle tasarladığımız CHECK constraint'leri,
-  // view'ları vb. bozabilir. Biz her değişikliği migration dosyasıyla kontrollü yapacağız.
+  // synchronize false kalmalı. Açık olduğunda TypeORM şemayı entity tanımlarına göre
+  // yeniden düzenler ve elle yazılmış CHECK constraint'leri ile view'ları bozar.
+  // Şema değişiklikleri yalnızca migration ile yapılır.
   synchronize: false,
 
   logging: process.env.NODE_ENV === 'development',

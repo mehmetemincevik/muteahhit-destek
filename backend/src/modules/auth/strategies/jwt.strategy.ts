@@ -3,8 +3,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 
-// Bu sınıf, gelen isteklerin Authorization header'ındaki JWT token'ını doğrular.
-// Token geçerliyse, içindeki bilgiyi (sub=userId, role) req.user olarak controller'lara sunar.
+// Authorization header'ındaki JWT'yi doğrular ve çözülen bilgiyi request.user'a yazar.
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(configService: ConfigService) {
@@ -16,7 +15,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: { sub: string; role: string }) {
-    // Burada dönen obje, her korumalı endpoint'te req.user olarak erişilebilir olacak.
+    // Dönen değer request.user olur (bkz. @CurrentUser decorator'ı).
+    //
+    // Rol, token içinden okunur; veritabanından tekrar doğrulanmaz. Bir kullanıcının
+    // rolü değiştirilirse eski token süresi dolana kadar eski rolle çalışmaya devam eder.
     return { userId: payload.sub, role: payload.role };
   }
 }

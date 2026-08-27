@@ -10,6 +10,6 @@ import { PaymentsController } from './payments.controller';
   imports: [TypeOrmModule.forFeature([Payment, Unit, AssetTransaction])],
   controllers: [PaymentsController],
   providers: [PaymentsService],
-  exports: [PaymentsService], // CashflowModule bunu markAsPaid için kullanacak
+  exports: [PaymentsService], // CashflowModule.markAsPaid kullanıyor
 })
 export class PaymentsModule {}

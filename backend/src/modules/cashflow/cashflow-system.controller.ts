@@ -2,21 +2,21 @@ import { Controller, Post, UseGuards } from '@nestjs/common';
 import { ApiKeyGuard } from '../../common/guards/api-key.guard';
 import { CashflowService } from './cashflow.service';
 
-// Bu controller, KULLANICI hesabı GEREKTİRMEZ -- sadece geçerli bir X-API-Key header'ı ister.
+// Sistem uçları. Kullanıcı oturumu değil, X-API-Key doğrulaması kullanır.
 //
-// NOT: Faiz işletme artık OTOMATİK olarak uygulamanın kendi zamanlayıcısı ile her gece
-// çalışıyor (bkz. CashflowService.handleDailyAccrualCron, @nestjs/schedule kullanıyor).
-// n8n'e (ya da başka bir dış tetikleyiciye) ARTIK ZORUNLU OLARAK ihtiyaç yok. Bu endpoint
-// sadece MANUEL tetikleme için duruyor -- örn. test etmek istediğinde, ya da sunucu bir gün
-// kapalıyken kaçırılan bir günü elle telafi etmek istediğinde.
+// Faiz tahakkuku normalde uygulama içi zamanlayıcıyla çalışır
+// (CashflowService.handleDailyAccrualCron). Buradaki uç manuel tetikleme içindir:
+// test veya sunucunun kapalı kaldığı bir günün telafisi.
 @Controller('system/cashflow')
 @UseGuards(ApiKeyGuard)
 export class CashflowSystemController {
   constructor(private readonly cashflowService: CashflowService) {}
 
-  // Manuel/test tetikleme:
-  // curl -X POST https://senin-sunucun/system/cashflow/run-daily-accrual \
-  //   -H "X-API-Key: .env'deki SYSTEM_API_KEY değeri"
+  // POST /system/cashflow/run-daily-accrual
+  // Header: X-API-Key: <SYSTEM_API_KEY>
+  //
+  // Aynı gün içinde tekrar çağrılması güvenlidir; mükerrer tahakkuk benzersiz kısıtla
+  // engellenir (bkz. runDailyAccrual).
   @Post('run-daily-accrual')
   runDailyAccrual() {
     return this.cashflowService.runDailyAccrual();

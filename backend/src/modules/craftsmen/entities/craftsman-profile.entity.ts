@@ -9,7 +9,8 @@ import {
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 
-// users tablosundaki 'craftsman' rolüne 1-1 ek bilgi
+// craftsman rolündeki kullanıcının profil bilgileri (users ile bire bir).
+// Profil kayıt anında oluşmaz; usta ilk kez kaydettiğinde açılır.
 @Entity('craftsman_profiles')
 export class CraftsmanProfile {
   @PrimaryGeneratedColumn('uuid')
@@ -40,7 +41,8 @@ export class CraftsmanProfile {
   @Column({ type: 'text', nullable: true })
   bio?: string;
 
-  // CACHE ALANLARI: craftsman_reviews üzerinden hesaplanır (bkz. CraftsmenService.recomputeRating)
+  // Türetilmiş alanlar; doğrudan yazılmaz. Her yeni değerlendirmede
+  // CraftsmenService.recomputeRating ile yeniden hesaplanır.
   @Column({ name: 'average_rating', type: 'numeric', precision: 3, scale: 2, default: 0 })
   averageRating: number;
 

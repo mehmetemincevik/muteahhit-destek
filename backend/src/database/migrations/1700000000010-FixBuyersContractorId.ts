@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-// Düzeltme: buyers tablosuna contractor_id ekler (alıcılar artık müteahhide özel).
-// Kaynak: 11_fix_buyers_contractor_id.sql
+// buyers tablosuna contractor_id ekler; alıcı kayıtları hesap bazında ayrılır.
+// Kaynak: schema/11_fix_buyers_contractor_id.sql
 export class FixBuyersContractorId1700000000010 implements MigrationInterface {
   name = 'FixBuyersContractorId1700000000010';
 

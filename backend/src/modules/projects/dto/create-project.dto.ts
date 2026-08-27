@@ -11,8 +11,8 @@ import {
 } from 'class-validator';
 import { LandOwnerDto } from './land-owner.dto';
 
-// Bu DTO, wireframe'deki "Yeni Proje Oluştur" ekranının tamamını tek istekte karşılar:
-// proje bilgisi + arsa bilgisi + (varsa) birden fazla arsa sahibi aynı anda gönderilir.
+// Proje, arsa ve arsa sahipleri tek istekte oluşturulur; üçü de aynı transaction
+// içinde kaydedilir (bkz. ProjectsService.create).
 export class CreateProjectDto {
   @IsString()
   @IsNotEmpty()
@@ -22,7 +22,7 @@ export class CreateProjectDto {
   @IsDateString()
   estimatedOccupancyDate?: string;
 
-  // --- Arsa bilgisi ---
+  // Arsa alanları. Hiçbiri gönderilmezse land kaydı oluşturulmaz.
   @IsOptional()
   @IsString()
   province?: string;
@@ -55,7 +55,8 @@ export class CreateProjectDto {
   @IsBoolean()
   isKatKarsiligi?: boolean;
 
-  // --- Arsa sahipleri (hisseli olabilir, birden fazla girilebilir) ---
+  // Hisseli tapuda birden fazla sahip olabilir.
+  // Sınırlama: hisse oranları toplamının %100 olduğu doğrulanmıyor.
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })

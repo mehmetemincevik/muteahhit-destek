@@ -15,9 +15,8 @@ export enum PaymentMethod {
   OTHER = 'other',
 }
 
-// Bir daire için gelen HER ödeme bir satır. Tek seferlik ödeme = tek satır,
-// parçalı (taksitli) ödeme = birden fazla satır. Bakiye bu tablodan HESAPLANIR,
-// hiçbir yerde "kalan bakiye" diye ayrı bir alan tutmuyoruz (bkz. unit_payment_summary view).
+// Daire tahsilatları. Her ödeme ayrı satırdır; taksitli satışta birden çok kayıt oluşur.
+// Kalan bakiye ayrı alanda tutulmaz, unit_payment_summary view'ından hesaplanır.
 @Entity('payments')
 export class Payment {
   @PrimaryGeneratedColumn('uuid')

@@ -12,8 +12,8 @@ import { AssetsModule } from '../assets/assets.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([CashflowCalendar, CashflowInterestAccrual, AssetTransaction]),
-    PaymentsModule, // PaymentsService (markAsPaid -> installment_payment için)
-    AssetsModule, // AssetsService (markAsPaid -> rent için)
+    PaymentsModule, // markAsPaid -> installment_payment
+    AssetsModule, // markAsPaid -> rent
   ],
   controllers: [CashflowController, CashflowSystemController],
   providers: [CashflowService],

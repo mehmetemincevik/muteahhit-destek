@@ -1,8 +1,8 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 
-// Kullanımı: @CurrentUser() user yazarak, JwtStrategy.validate()'te dönen
-// { userId, role } objesini doğrudan controller metoduna parametre olarak alabiliriz.
-// Bu, her yerde `req.user` yazmak yerine daha temiz bir kullanım sağlar.
+// JwtStrategy.validate() çıktısını ({ userId, role }) controller metoduna parametre
+// olarak aktarır. JwtAuthGuard'ın çalıştığı uçlarda kullanılır; korumasız bir uçta
+// undefined döner.
 export const CurrentUser = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext) => {
     const request = ctx.switchToHttp().getRequest();

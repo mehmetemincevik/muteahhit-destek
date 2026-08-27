@@ -36,16 +36,17 @@ export class CraftsmenService {
     private readonly projectsService: ProjectsService,
   ) {}
 
-  // --- Profil: UPSERT deseni (varsa güncelle, yoksa oluştur) ---
+  // Profil kaydı yoksa oluşturulur, varsa güncellenir. Gönderilmeyen alanlar
+  // mevcut değerini korur.
 
   async upsertProfile(userId: string, dto: UpsertProfileDto): Promise<CraftsmanProfile> {
     let profile = await this.profileRepo.findOne({ where: { userId } });
 
     if (profile) {
-      // Zaten var -> alanları güncelle
+
       Object.assign(profile, dto);
     } else {
-      // Yok -> yeni oluştur
+
       profile = this.profileRepo.create({ userId, ...dto });
     }
     return this.profileRepo.save(profile);
@@ -59,7 +60,7 @@ export class CraftsmenService {
     return profile;
   }
 
-  // Müteahhitlerin usta aramasına yönelik genel liste -- yetki kısıtı YOK (herkese açık bilgi)
+  // Usta arama listesi. Sahiplik kısıtı yoktur; puana göre sıralanır.
   async findAllProfiles(filters?: { province?: string; district?: string }): Promise<CraftsmanProfile[]> {
     const query = this.profileRepo.createQueryBuilder('profile');
     if (filters?.province) {
@@ -71,7 +72,7 @@ export class CraftsmenService {
     return query.orderBy('profile.averageRating', 'DESC').getMany();
   }
 
-  // Bir ustanın tam profilini (paketler, portfolyo, yorumlar dahil) herkes görebilir
+  // Profil, aktif paketler, portfolyo ve değerlendirmeler birlikte döner.
   async getProfileDetail(craftsmanId: string) {
     const profile = await this.profileRepo.findOne({ where: { id: craftsmanId } });
     if (!profile) {
@@ -97,7 +98,7 @@ export class CraftsmenService {
     return profile.id;
   }
 
-  // --- Hizmet Paketleri ---
+  // Hizmet paketleri.
 
   async createPackage(userId: string, dto: CreatePackageDto): Promise<CraftsmanServicePackage> {
     const craftsmanId = await this.getOwnCraftsmanId(userId);
@@ -129,7 +130,7 @@ export class CraftsmenService {
     return this.packageItemRepo.save(item);
   }
 
-  // --- Portfolyo ---
+  // Portfolyo görselleri. Görseller dış URL olarak saklanır; yükleme akışı yoktur.
 
   async addPortfolioImage(
     userId: string,
@@ -140,11 +141,14 @@ export class CraftsmenService {
     return this.portfolioRepo.save(image);
   }
 
-  // --- Yorumlar (müteahhit ustayı değerlendiriyor) ---
+  // Değerlendirmeler.
 
   async createReview(contractorId: string, dto: CreateReviewDto): Promise<CraftsmanReview> {
-    // Eğer projectId verildiyse, bu ustanın gerçekten o projede çalıştığını doğrula --
-    // rastgele bir ustaya, hiç çalışmadığı bir proje üzerinden sahte yorum yazılamasın.
+    // projectId verildiyse ustanın o projede ataması olduğu doğrulanır; böylece
+    // birlikte çalışılmamış bir proje üzerinden değerlendirme yazılamaz.
+    //
+    // Sınırlama: projectId gönderilmezse bu kontrol atlanır ve herhangi bir ustaya
+    // değerlendirme yazılabilir.
     if (dto.projectId) {
       const assignment = await this.assignmentRepo.findOne({
         where: { projectId: dto.projectId, craftsmanId: dto.craftsmanId },
@@ -175,7 +179,7 @@ export class CraftsmenService {
     });
   }
 
-  // --- Proje Atamaları ---
+  // Proje atamaları.
 
   async createAssignment(
     contractorId: string,
@@ -206,7 +210,7 @@ export class CraftsmenService {
     });
   }
 
-  // Usta kendi aktif/geçmiş projelerini görür
+  // Ustanın kendi atamaları.
   async findAssignmentsForCraftsman(userId: string): Promise<ProjectCraftsmanAssignment[]> {
     const craftsmanId = await this.getOwnCraftsmanId(userId);
     return this.assignmentRepo.find({

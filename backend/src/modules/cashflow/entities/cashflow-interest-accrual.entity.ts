@@ -9,9 +9,11 @@ import {
 } from 'typeorm';
 import { CashflowCalendar } from './cashflow-calendar.entity';
 
-// Her günün faiz işlemi KALICI bir satır olarak burada tutulur, asla silinmez/üzerine yazılmaz.
+// Günlük faiz tahakkukları. Kayıtlar güncellenmez veya silinmez; tutarın nasıl oluştuğu
+// bu tablodan izlenir. (calendar_entry_id, accrual_date) benzersizdir ve mükerrer
+// tahakkuku engeller.
 @Entity('cashflow_interest_accruals')
-@Unique(['calendarEntryId', 'accrualDate']) // aynı gün için iki kez faiz işlemesin
+@Unique(['calendarEntryId', 'accrualDate']) // gün başına tek tahakkuk
 export class CashflowInterestAccrual {
   @PrimaryGeneratedColumn('uuid')
   id: string;

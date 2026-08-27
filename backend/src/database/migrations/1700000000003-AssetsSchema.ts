@@ -1,7 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-// Bu migration, 04_assets.sql dosyasındaki şemayı olduğu gibi uygular.
-// Kaynak: proje planlama sürecinde birlikte tasarlanan 04_assets.sql
+// Kaynak: schema/04_assets.sql
 export class AssetsSchema1700000000003 implements MigrationInterface {
   name = 'AssetsSchema1700000000003';
 
@@ -123,9 +122,7 @@ CREATE TABLE asset_transactions (
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    // NOT: down() metotları elle doldurulmalı (geri alma sırası ileri sıranın tersi olmalı,
-    // foreign key bağımlılıkları nedeniyle DROP TABLE sırası önemli). MVP aşamasında geri
-    // alma senaryosu genelde gerekmez, ama production'a geçmeden önce doldurulması önerilir.
-    throw new Error('Bu migration için down() henüz yazılmadı -- elle geri almanız gerekir.');
+    // TODO: Geri alma yazılmadı. DROP sırası foreign key bağımlılıklarının tersi olmalı.
+    throw new Error('down() tanımlı değil; geri alma elle yapılmalıdır.');
   }
 }

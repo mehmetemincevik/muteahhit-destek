@@ -6,8 +6,8 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
-// Bu sınıf, veritabanındaki "users" tablosunun TypeScript karşılığı.
-// Kolon isimleri SQL'deki ile birebir aynı olacak şekilde yazıldı (snake_case).
+// users tablosu. Kolon adları snake_case olarak açıkça belirtilir; TypeORM'un
+// otomatik adlandırmasına güvenilmez.
 export enum UserRole {
   CONTRACTOR = 'contractor',
   CRAFTSMAN = 'craftsman',
@@ -30,8 +30,8 @@ export class User {
   @Column({ type: 'varchar', length: 150, nullable: true })
   email?: string;
 
-  // DİKKAT: şifre asla düz metin tutulmaz. bcrypt ile hash'lenmiş hali burada saklanır.
-  // Bu alan hiçbir API cevabında dışarı çıkmamalı (bkz. auth servisindeki select hariç tutma).
+  // bcrypt hash'i. Hiçbir API yanıtına dahil edilmemeli; yanıt alanları
+  // AuthService içinde tek tek seçilerek oluşturulur.
   @Column({ name: 'password_hash', type: 'text' })
   passwordHash: string;
 

@@ -53,7 +53,8 @@ export class AuthService {
   private buildAuthResponse(user: User) {
     const token = this.jwtService.sign({ sub: user.id, role: user.role });
 
-    // passwordHash'i asla API cevabına dahil etmiyoruz
+    // Yanıt alanları açıkça seçilir; passwordHash dışarı çıkmamalı.
+    // Entity doğrudan döndürülürse bu alan da serileşir.
     return {
       accessToken: token,
       user: {

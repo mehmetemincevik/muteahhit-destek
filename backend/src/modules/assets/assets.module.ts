@@ -14,6 +14,6 @@ import { AssetsController, RentalsController } from './assets.controller';
   ],
   controllers: [AssetsController, RentalsController],
   providers: [AssetsService],
-  exports: [AssetsService], // CashflowModule bunu markAsPaid için kullanacak
+  exports: [AssetsService], // CashflowModule.markAsPaid kullanıyor
 })
 export class AssetsModule {}

@@ -13,7 +13,7 @@ export class CreateAssetDto {
   @IsString()
   description?: string;
 
-  // Sadece real_estate tipi için anlamlı, diğerlerinde gönderilmesine gerek yok
+  // Yalnızca real_estate tipinde kullanılır.
   @IsOptional()
   @IsString()
   province?: string;

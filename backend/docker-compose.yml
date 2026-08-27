@@ -1,9 +1,7 @@
-version: '3.8'
-
-# Bu dosya, bilgisayarında Postgres'i KURMADAN, Docker üzerinden çalıştırmanı sağlar.
-# Docker Desktop kurulu olması yeterli (https://www.docker.com/products/docker-desktop/).
-# Çalıştırmak için: docker-compose up -d
-# Durdurmak için: docker-compose down
+# Geliştirme ortamı için PostgreSQL.
+#   docker compose up -d     başlat
+#   docker compose down      durdur
+# Veri muteahhit_pg_data volume'ünde kalır; tamamen silmek için `down -v`.
 
 services:
   postgres:

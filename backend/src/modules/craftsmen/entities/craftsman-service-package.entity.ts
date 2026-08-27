@@ -17,9 +17,10 @@ export enum PriceType {
   NEGOTIABLE = 'negotiable',
 }
 
-// Usta ÖZGÜRCE kendi paketini oluşturabiliyor. templateId (Modül 8'de tanımlanacak
-// service_package_templates'e referans) şimdilik düz bir UUID alanı, FK ilişkisi Şablonlar
-// modülünü yazınca eklenecek.
+// Usta hizmet paketleri. Hazır şablondan türetilebilir veya sıfırdan oluşturulabilir.
+//
+// templateId, service_package_templates kaydına işaret eder. İlişki entity tarafında
+// tanımlı değil; foreign key yalnızca veritabanı seviyesinde mevcut.
 @Entity('craftsman_service_packages')
 export class CraftsmanServicePackage {
   @PrimaryGeneratedColumn('uuid')

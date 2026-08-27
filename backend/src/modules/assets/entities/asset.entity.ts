@@ -37,15 +37,17 @@ export class Asset {
   @Column({ type: 'text', nullable: true })
   description?: string;
 
-  // CACHE ALANI: nakit/emtia için asset_transactions toplamından, mülk için en son
-  // asset_value_snapshots kaydından hesaplanır (servis katmanında, her ilgili işlemden sonra).
+  // Türetilmiş alan; doğrudan yazılmaz. Kaynağı varlık tipine göre değişir:
+  //   cash / commodity -> asset_transactions toplamı
+  //   real_estate      -> en güncel asset_value_snapshots kaydı
+  // İlgili işlemlerden sonra AssetsService tarafından güncellenir.
   @Column({ name: 'current_value', type: 'numeric', precision: 14, scale: 2, default: 0 })
   currentValue: number;
 
   @Column({ name: 'value_updated_at', type: 'timestamptz', nullable: true })
   valueUpdatedAt?: Date;
 
-  // Sadece real_estate tipi için anlamlı alanlar
+  // Yalnızca real_estate tipinde doldurulur.
   @Column({ type: 'varchar', length: 100, nullable: true })
   province?: string;
 

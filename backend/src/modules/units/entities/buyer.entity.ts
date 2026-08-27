@@ -8,8 +8,9 @@ import {
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 
-// Daire alıcıları (uygulama içi kullanıcı değil, sadece müteahhidin tuttuğu bilgi kaydı).
-// Her alıcı BİR müteahhide aittir -- başka müteahhitler bu kaydı göremez (kişisel veri).
+// Daire alıcıları. Sisteme giriş yapan bir kullanıcı değil, müteahhidin tuttuğu kayıt.
+// Her alıcı bir müteahhide bağlıdır; ad, telefon ve kimlik numarası içerdiği için
+// hesaplar arası erişime kapalıdır.
 @Entity('buyers')
 export class Buyer {
   @PrimaryGeneratedColumn('uuid')

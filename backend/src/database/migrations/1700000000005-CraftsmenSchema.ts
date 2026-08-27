@@ -1,7 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-// Bu migration, 06_craftsmen.sql dosyasındaki şemayı olduğu gibi uygular.
-// Kaynak: proje planlama sürecinde birlikte tasarlanan 06_craftsmen.sql
+// Kaynak: schema/06_craftsmen.sql
 export class CraftsmenSchema1700000000005 implements MigrationInterface {
   name = 'CraftsmenSchema1700000000005';
 
@@ -28,14 +27,14 @@ CREATE TABLE craftsman_profiles (
 );
 
 -- Hizmet paketleri: usta ÖZGÜRCE kendi paketini oluşturabiliyor (sabit şablon şart değil).
--- Sistem ayrıca hazır şablonlar sunacak (bkz. Modül 8), usta isterse şablondan başlayıp
+-- Hazır şablonlar service_package_templates tablosunda tutulur; usta şablondan başlayıp
 -- düzenleyebilir ya da sıfırdan kendi paketini kurabilir.
 CREATE TABLE craftsman_service_packages (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     craftsman_id         UUID NOT NULL REFERENCES craftsman_profiles(id) ON DELETE CASCADE,
 
-    -- Eğer bir sistem şablonundan türetildiyse referans (opsiyonel, Modül 8'de tanımlanacak)
-    template_id            UUID,                       -- FK Modül 8'de eklenecek
+    -- Şablondan türetildiyse kaynak şablon referansı
+    template_id            UUID,                       -- FK service_package_templates ile birlikte eklenir
 
     name                    VARCHAR(200) NOT NULL,       -- "Alçı-Sıva-Astar Paketi", "Su-Doğalgaz-Elektrik Paketi"
     description               TEXT,
@@ -89,7 +88,7 @@ CREATE TABLE craftsman_reviews (
 -- toplamından hesaplanan bir CACHE değeri olarak kullanılabilir.
 -- ============================================
 
--- Bir usta, bir projede fiilen çalışıyor/çalıştı -- teklif kabul edildiğinde (Modül 7) burada
+-- Ustanın bir projedeki görevlendirmesi. Teklif kabul edildiğinde burada
 -- otomatik bir kayıt oluşur.
 CREATE TABLE project_craftsman_assignments (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -111,9 +110,7 @@ CREATE TABLE project_craftsman_assignments (
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    // NOT: down() metotları elle doldurulmalı (geri alma sırası ileri sıranın tersi olmalı,
-    // foreign key bağımlılıkları nedeniyle DROP TABLE sırası önemli). MVP aşamasında geri
-    // alma senaryosu genelde gerekmez, ama production'a geçmeden önce doldurulması önerilir.
-    throw new Error('Bu migration için down() henüz yazılmadı -- elle geri almanız gerekir.');
+    // TODO: Geri alma yazılmadı. DROP sırası foreign key bağımlılıklarının tersi olmalı.
+    throw new Error('down() tanımlı değil; geri alma elle yapılmalıdır.');
   }
 }

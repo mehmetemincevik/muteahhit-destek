@@ -10,8 +10,8 @@ export class TemplatesService {
     private readonly templateRepo: Repository<ServicePackageTemplate>,
   ) {}
 
-  // Sadece OKUMA -- şablonlar migration ile önceden yüklendi (bkz. 08_templates.sql),
-  // bu modülde yazma (create/update) endpoint'i yok, MVP'de gerek yok.
+  // Şablonlar salt okunurdur; kayıtlar migration ile yüklenir (08_templates.sql).
+  // Yeni şablon eklemek için migration yazılması gerekir.
   async findAll(): Promise<ServicePackageTemplate[]> {
     return this.templateRepo.find({
       where: { isActive: true },

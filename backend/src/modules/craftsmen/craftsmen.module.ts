@@ -24,6 +24,6 @@ import { ProjectsModule } from '../projects/projects.module';
   ],
   controllers: [CraftsmenController],
   providers: [CraftsmenService],
-  exports: [CraftsmenService], // MessagingModule (Modül 7) teklif kabul edildiğinde atama oluşturmak için kullanacak
+  exports: [CraftsmenService], // MessagingModule teklif kabulünde atama oluşturmak için kullanıyor
 })
 export class CraftsmenModule {}

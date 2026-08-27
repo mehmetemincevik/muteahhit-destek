@@ -12,7 +12,7 @@ import { User } from '../../users/entities/user.entity';
 import { Project } from '../../projects/entities/project.entity';
 
 @Entity('craftsman_reviews')
-@Unique(['craftsmanId', 'contractorId', 'projectId']) // aynı projede aynı müteahhit ikinci kez oy veremez
+@Unique(['craftsmanId', 'contractorId', 'projectId']) // proje başına tek değerlendirme
 export class CraftsmanReview {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -39,7 +39,7 @@ export class CraftsmanReview {
   project?: Project;
 
   @Column({ type: 'smallint' })
-  rating: number; // 1-5, DTO seviyesinde kontrol edilir
+  rating: number; // 1-5 aralığı DTO'da doğrulanır
 
   @Column({ type: 'text', nullable: true })
   comment?: string;

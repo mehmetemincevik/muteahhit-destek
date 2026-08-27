@@ -11,13 +11,11 @@ import { Block } from './block.entity';
 import { Buyer } from './buyer.entity';
 import { LandOwner } from '../../projects/entities/land-owner.entity';
 
-// SQL'deki CHECK constraint ile birebir eşleşmeli:
-// 'sold' -> buyer_id dolu, land_owner_id boş
-// 'given_to_land_owner' -> land_owner_id dolu, buyer_id boş
-// 'available' -> ikisi de boş
-// Bu kural veritabanı seviyesinde zaten zorlanıyor (CHECK constraint), ama servis katmanında
-// da aynı kuralı uygulamak lazım -- kullanıcıya veritabanı hatası göstermek yerine
-// anlamlı bir hata mesajı vermek için (bkz. units.service.ts).
+// Durum ile ilişki alanları arasındaki kural (veritabanında CHECK constraint olarak da tanımlı):
+//   sold                -> buyerId dolu, landOwnerId boş
+//   given_to_land_owner -> landOwnerId dolu, buyerId boş
+//   available           -> ikisi de boş
+// Yeni bir durum eklenirse constraint, DTO ve UnitsService.updateStatus birlikte güncellenmeli.
 export enum UnitOwnershipStatus {
   AVAILABLE = 'available',
   SOLD = 'sold',

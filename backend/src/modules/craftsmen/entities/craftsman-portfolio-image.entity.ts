@@ -29,7 +29,9 @@ export class CraftsmanPortfolioImage {
   package?: CraftsmanServicePackage;
 
   @Column({ name: 'image_url', type: 'text' })
-  imageUrl: string; // obje depolama (S3/R2/MinIO) linki -- MVP'de dışarıdan bir URL olarak girilir
+  // Dış URL olarak saklanır. Dosya yükleme ve obje depolama entegrasyonu yok;
+  // TODO: yükleme akışı eklenmeli (S3 / R2 / MinIO).
+  imageUrl: string;
 
   @Column({ type: 'varchar', length: 300, nullable: true })
   caption?: string;

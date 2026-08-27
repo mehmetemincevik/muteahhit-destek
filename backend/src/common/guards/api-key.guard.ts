@@ -1,14 +1,11 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-// Bu guard, JWT/kullanıcı hesabı GEREKTİRMEYEN, sistem-sistem çağrıları için kullanılır
-// (örn. n8n'in günlük faiz işletme endpoint'ini tetiklemesi). Kullanıcı bir "Bearer token"
-// yerine, isteğin header'ında sabit bir "X-API-Key" göndermeli.
+// Sistem-sistem çağrıları için kimlik doğrulama. Kullanıcı oturumu yerine sabit bir
+// X-API-Key header'ı bekler; JwtAuthGuard'ın kullanıcı kavramı bu tür çağrılara uymuyor.
 //
-// NEDEN AYRI BİR GUARD? JwtAuthGuard, bir KULLANICININ kimliğini doğrular (login olmuş biri).
-// Ama n8n bir kullanıcı değil, bir otomasyon aracı -- onun için "kullanıcı girişi" kavramı
-// hiç uygun değil. Bu yüzden tamamen farklı, daha basit bir doğrulama mekanizması kullanıyoruz:
-// sadece "bu isteği gönderen, gizli anahtarı biliyor mu?" sorusuna bakıyoruz.
+// Anahtar .env'deki SYSTEM_API_KEY ile karşılaştırılır ve düz metin olarak tutulur.
+// Rotasyon, kapsam (scope) veya çoklu anahtar desteği yok.
 @Injectable()
 export class ApiKeyGuard implements CanActivate {
   constructor(private readonly configService: ConfigService) {}
@@ -19,8 +16,8 @@ export class ApiKeyGuard implements CanActivate {
     const expectedKey = this.configService.get<string>('SYSTEM_API_KEY');
 
     if (!expectedKey) {
-      // .env'de SYSTEM_API_KEY tanımlanmamışsa, güvenlik açığı oluşturmamak için
-      // bu endpoint'i TAMAMEN kapatıyoruz (izin vermek yerine reddediyoruz).
+      // Anahtar tanımlı değilse uç tamamen kapatılır; yapılandırma eksikliği
+      // açık erişime dönüşmemeli.
       throw new UnauthorizedException('Sistem API anahtarı sunucuda yapılandırılmamış');
     }
 

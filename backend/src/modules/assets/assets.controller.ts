@@ -61,7 +61,7 @@ export class AssetsController {
   }
 }
 
-// Kira ödemesi, rental'a bağlı olduğu için ayrı bir controller'da (URL kökü farklı: /rentals/...)
+// Kira ödemeleri kira sözleşmesine bağlıdır; /rentals kökü altında ayrı tutulur.
 @Controller('rentals')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('contractor')

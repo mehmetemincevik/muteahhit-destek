@@ -13,9 +13,8 @@ export class ProjectsService {
     @InjectDataSource() private readonly dataSource: DataSource,
   ) {}
 
-  // Proje + arsa + arsa sahiplerini TEK bir veritabanı işleminde (transaction) oluşturur.
-  // Neden transaction? Örneğin arsa sahibi eklerken bir hata olursa, yarım kalmış bir proje
-  // veritabanında kalmamalı -- ya hepsi başarılı olur, ya da hiçbiri kaydedilmez.
+  // Proje, arsa ve arsa sahipleri tek transaction içinde oluşturulur; ara adımlardan
+  // birinde hata olursa yarım kayıt kalmaz.
   async create(contractorId: string, dto: CreateProjectDto): Promise<Project> {
     return this.dataSource.transaction(async (manager) => {
       const project = manager.create(Project, {
@@ -27,7 +26,7 @@ export class ProjectsService {
       });
       await manager.save(project);
 
-      // Arsa bilgisi verilmişse (en azından bir alan doluysa) land kaydı oluştur
+      // Arsa alanlarından en az biri doluysa land kaydı açılır.
       const hasLandInfo =
         dto.province || dto.district || dto.areaM2 || dto.purchasePrice || dto.adaNo;
 
@@ -63,7 +62,7 @@ export class ProjectsService {
     });
   }
 
-  // Sadece giriş yapan müteahhidin KENDİ projelerini listeler
+  // Yalnızca istek sahibinin projeleri döner.
   async findAllForContractor(contractorId: string): Promise<Project[]> {
     return this.projectRepo.find({
       where: { contractorId },
@@ -81,7 +80,8 @@ export class ProjectsService {
       throw new NotFoundException('Proje bulunamadı');
     }
 
-    // Yetkilendirme kontrolü: başka bir müteahhidin projesine erişim engellensin
+    // Sahiplik kontrolü. Bu metot diğer servislerde de yetki doğrulaması için
+    // çağrılır (UnitsService, CostsService, CraftsmenService).
     if (project.contractorId !== contractorId) {
       throw new ForbiddenException('Bu projeye erişim yetkiniz yok');
     }

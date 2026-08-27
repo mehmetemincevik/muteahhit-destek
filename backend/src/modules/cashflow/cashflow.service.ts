@@ -30,10 +30,12 @@ export class CashflowService {
   ) {}
 
   async create(contractorId: string, dto: CreateCashflowEntryDto): Promise<CashflowCalendar> {
-    // unitId/rentalId'den polimorfik source_table/source_id'yi biz oluşturuyoruz --
-    // NOT: burada bilerek DERİN yetki kontrolü yapmıyoruz (bu sadece "planlanan" bir kayıt).
-    // Gerçek güvenlik kontrolü, markAsPaid() içinde PaymentsService/AssetsService çağrıldığında
-    // devreye giriyor -- para gerçekten hareket ederken tam doğrulama zaten zorunlu oluyor.
+    // unitId / rentalId, polimorfik sourceTable + sourceId çiftine dönüştürülür.
+    //
+    // Bu aşamada referansın sahipliği doğrulanmaz; kayıt yalnızca bir plandır ve para
+    // hareketi oluşturmaz. Doğrulama markAsPaid() içinde, ilgili servis çağrıldığında
+    // yapılır. Sonuç olarak geçersiz bir referansla kayıt açılabilir, ancak ödeme
+    // adımında hata verir.
     let sourceTable: string | undefined;
     let sourceId: string | undefined;
     if (dto.unitId) {
@@ -87,7 +89,10 @@ export class CashflowService {
     return { entry, accruals };
   }
 
-  // --- Ödendi İşaretleme: entry_type'a göre GERÇEK kayda dönüştürür ---
+  // Planlanan kaydı gerçekleşen işleme dönüştürür. Hedef tablo entryType'a göre değişir:
+  //   installment_payment -> payments
+  //   rent                -> rental_payments
+  //   check / other       -> asset_transactions
 
   async markAsPaid(
     contractorId: string,
@@ -107,8 +112,7 @@ export class CashflowService {
             'Bu kayıt oluşturulurken unitId belirtilmemiş, hangi daireye ait olduğu bilinmiyor',
           );
         }
-        // PaymentsService.create() ZATEN yetki kontrolü + otomatik defter kaydı yapıyor --
-        // burada tekrar yazmıyoruz, olduğu gibi yeniden kullanıyoruz.
+        // PaymentsService.create() sahiplik doğrulaması ve defter kaydını kendisi yapar.
         await this.paymentsService.create(contractorId, entry.sourceId, {
           amount: entry.currentAmount,
           paymentDate: dto.paidDate,
@@ -132,8 +136,7 @@ export class CashflowService {
       }
       case CashflowEntryType.CHECK:
       case CashflowEntryType.OTHER: {
-        // Belirli bir isimli varlığa değil, doğrudan genel deftere yazıyoruz (payments'taki
-        // unit_sale_payment/cost_payment ile aynı mantık -- asset_id NULL).
+        // Genel deftere yazılır; assetId boş bırakılır.
         const isIncome = entry.direction === 'income';
         await this.assetTransactionRepo.save(
           this.assetTransactionRepo.create({
@@ -157,11 +160,10 @@ export class CashflowService {
     return this.calendarRepo.save(entry);
   }
 
-  // --- Günlük Faiz İşletme ---
+  // Gecikme faizi tahakkuku.
 
-  // Uygulama içi zamanlayıcı: her gece 00:05'te OTOMATİK çalışır, n8n gibi dış bir araca
-  // ihtiyaç YOK. '5 0 * * *' = "her gün saat 00:05'te" (cron syntax: dakika saat gün ay haftagünü).
-  // Sunucu Türkiye saatinde çalışıyorsa bu saat de Türkiye saatine göre olur.
+  // Her gün 00:05'te çalışır. Saat, sunucunun yerel saat dilimine göre yorumlanır;
+  // farklı bölgede çalıştırılacaksa TZ ayarı kontrol edilmeli.
   @Cron('5 0 * * *')
   async handleDailyAccrualCron(): Promise<void> {
     this.logger.log('Günlük faiz işletme zamanlayıcısı başladı...');
@@ -172,11 +174,11 @@ export class CashflowService {
     );
   }
 
-  // API key korumalı endpoint tarafından (manuel tetikleme/test/tekrar çalıştırma için) VE
-  // yukarıdaki cron tarafından (otomatik günlük çalışma için) çağrılır. Aynı gün için mükerrer
-  // çalıştırılsa bile ON CONFLICT DO NOTHING sayesinde güvenlidir (bkz. aşağıdaki mantık).
+  // Hem zamanlayıcı hem de sistem ucu tarafından çağrılır. Aynı gün içinde birden çok
+  // kez çalıştırılması güvenlidir; mükerrer tahakkuk (calendar_entry_id, accrual_date)
+  // benzersiz kısıtıyla engellenir.
   async runDailyAccrual(): Promise<{ markedOverdue: number; interestApplied: number; skipped: number }> {
-    // 1) Vadesi geçmiş ama hâlâ 'pending' olan kayıtları 'overdue' yap
+    // Vadesi geçmiş bekleyen kayıtlar gecikmiş olarak işaretlenir.
     const overdueResult = await this.dataSource.query(
       `UPDATE cashflow_calendar
        SET status = 'overdue', updated_at = now()
@@ -185,7 +187,7 @@ export class CashflowService {
     );
     const markedOverdue = overdueResult.length;
 
-    // 2) 'overdue' VE faiz oranı tanımlı olan tüm kayıtları bul
+    // Faiz oranı tanımlı gecikmiş kayıtlar işlenir.
     const overdueEntries = await this.calendarRepo
       .createQueryBuilder('entry')
       .where('entry.status = :status', { status: CashflowStatus.OVERDUE })
@@ -196,14 +198,16 @@ export class CashflowService {
     let skipped = 0;
 
     for (const entry of overdueEntries) {
-      // BASİT FAİZ: her zaman originalAmount üzerinden (bileşik değil)
+      // Basit faiz: taban her zaman anapara, birikmiş tutar değil.
       const interest = Number(entry.originalAmount) * Number(entry.dailyInterestRate);
       const balanceBefore = Number(entry.currentAmount);
       const balanceAfter = balanceBefore + interest;
 
-      // ON CONFLICT DO NOTHING: aynı gün için ikinci kez çalıştırılırsa (örn. n8n iki kez
-      // tetiklerse) sessizce atlar, mükerrer faiz işlemez. RETURNING ile gerçekten eklenip
-      // eklenmediğini anlıyoruz.
+      // Aynı gün için ikinci kayıt eklenmez. RETURNING boş dönerse tahakkuk zaten
+      // yapılmış demektir ve bakiye güncellenmez.
+      //
+      // Sınırlama: kayıtlar tek tek işleniyor. Kayıt sayısı arttığında toplu bir
+      // sorguya dönüştürülmesi gerekir.
       const inserted = await this.dataSource.query(
         `INSERT INTO cashflow_interest_accruals
            (calendar_entry_id, accrual_date, interest_amount, balance_before, balance_after)

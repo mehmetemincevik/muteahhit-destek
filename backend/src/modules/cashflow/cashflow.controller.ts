@@ -9,8 +9,9 @@ import { MarkAsPaidDto } from './dto/mark-as-paid.dto';
 
 type AuthUser = { userId: string; role: string };
 
-// NOT: run-daily-accrual buradan kaldırıldı, ayrı bir sistem controller'ına taşındı
-// (bkz. cashflow-system.controller.ts) -- kullanıcı auth'u ile sistem auth'unu karıştırmamak için.
+// Kullanıcı uçları. Sistem tetiklemeli işlemler ayrı controller'da tutulur
+// (bkz. cashflow-system.controller.ts); iki farklı kimlik doğrulama mekanizması
+// aynı controller'da karışmasın.
 @Controller('cashflow')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('contractor')

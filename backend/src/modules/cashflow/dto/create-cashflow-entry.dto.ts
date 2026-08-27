@@ -42,7 +42,7 @@ export class CreateCashflowEntryDto {
   @IsUUID()
   unitId?: string;
 
-  // entryType='rent' ise hangi kira sözleşmesine ait olduğunu belirtir
+  // entryType='rent' için kira sözleşmesi referansı
   @IsOptional()
   @IsUUID()
   rentalId?: string;

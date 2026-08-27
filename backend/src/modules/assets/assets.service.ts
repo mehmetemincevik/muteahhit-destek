@@ -36,8 +36,9 @@ export class AssetsService {
     return asset;
   }
 
-  // Nakit/emtia varlıklarda bakiye, o asset_id'ye ait TÜM hareketlerin toplamıdır.
-  // Her manuel hareket eklendiğinde bu yeniden hesaplanıp asset.currentValue'ya yazılır.
+  // Nakit ve emtia bakiyesi, varlığa ait tüm hareketlerin toplamıdır. Her hareket
+  // sonrası baştan hesaplanır; artımlı güncelleme yapılmaz, böylece kayıt silme veya
+  // düzeltme durumunda değer sapmaz.
   private async recomputeCashCommodityValue(assetId: string): Promise<void> {
     const rows: { total: string }[] = await this.dataSource.query(
       'SELECT COALESCE(SUM(amount), 0) AS total FROM asset_transactions WHERE asset_id = $1',
@@ -81,7 +82,7 @@ export class AssetsService {
     return { asset, transactions, rentals, snapshots };
   }
 
-  // --- Manuel Hareketler (dışarıdan gelen ödemeler dahil) ---
+  // Manuel hareketler: uygulama akışları dışında oluşan giriş ve çıkışlar.
 
   async addManualTransaction(
     contractorId: string,
@@ -90,8 +91,7 @@ export class AssetsService {
   ): Promise<AssetTransaction> {
     await this.assertAssetOwnership(contractorId, assetId);
 
-    // Yön (direction) zaten +/- işaretini belirliyor: ekleme pozitif, çıkarma negatif.
-    // Kullanıcı DTO'da her zaman pozitif bir sayı gönderiyor, işareti biz burada uyguluyoruz.
+    // DTO her zaman pozitif tutar taşır; işaret yön alanından türetilir.
     const signedAmount = dto.direction === 'manual_addition' ? dto.amount : -dto.amount;
 
     const transaction = this.transactionRepo.create({
@@ -134,8 +134,9 @@ export class AssetsService {
     });
     const saved = await this.rentalRepo.save(rental);
 
-    // "Elde tutulan daire ile kira geliri bağımsız değil" -- kira eklendiğinde varlığın
-    // kendisinde de bunu işaretliyoruz.
+    // Varlık üzerindeki kira durumu işaretlenir; liste ekranlarında filtreleme için kullanılır.
+    //
+    // Sınırlama: sözleşme pasifleştirildiğinde bu bayrak geri alınmıyor.
     await this.assetRepo.update(assetId, { isGeneratingRentalIncome: true });
 
     return saved;
@@ -167,9 +168,9 @@ export class AssetsService {
     });
     const saved = await this.rentalPaymentRepo.save(payment);
 
-    // Kira geliri, defter kaydı olarak asset_transactions'a düşer (raporlama/n8n için) --
-    // AMA mülkün kendi currentValue'sunu ETKİLEMEZ (mülk değeri sadece asset_value_snapshots'tan
-    // gelir, kira geliri birikmesiyle "mülk değeri artıyor" gibi yanlış bir hesap oluşmasın diye).
+    // Kira geliri deftere yazılır ancak mülkün currentValue'sunu değiştirmez.
+    // Mülk değeri yalnızca değerleme kayıtlarından gelir; kira birikimi değere eklenirse
+    // varlık değeri yanlış şişer.
     await this.transactionRepo.save(
       this.transactionRepo.create({
         contractorId,
@@ -185,7 +186,7 @@ export class AssetsService {
     return saved;
   }
 
-  // --- Değer Anlık Görüntüsü (Mülkler İçin) ---
+  // Mülk değerleme kayıtları.
 
   async addValueSnapshot(
     contractorId: string,
@@ -206,8 +207,7 @@ export class AssetsService {
     });
     const saved = await this.snapshotRepo.save(snapshot);
 
-    // Mülk tipi varlıklarda currentValue, en son snapshot'tan güncellenir (nakit/emtia'daki
-    // "hareketlerin toplamı" mantığından FARKLI -- burada tek bir en güncel değer yeterli).
+    // Mülkte currentValue en son değerleme kaydından gelir; hareket toplamı kullanılmaz.
     await this.assetRepo.update(assetId, {
       currentValue: dto.estimatedValue,
       valueUpdatedAt: new Date(),
