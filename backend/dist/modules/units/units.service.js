@@ -18,12 +18,24 @@ const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const block_entity_1 = require("./entities/block.entity");
 const unit_entity_1 = require("./entities/unit.entity");
+const buyer_entity_1 = require("./entities/buyer.entity");
 const projects_service_1 = require("../projects/projects.service");
 let UnitsService = class UnitsService {
-    constructor(blockRepo, unitRepo, projectsService) {
+    constructor(blockRepo, unitRepo, buyerRepo, projectsService) {
         this.blockRepo = blockRepo;
         this.unitRepo = unitRepo;
+        this.buyerRepo = buyerRepo;
         this.projectsService = projectsService;
+    }
+    async createBuyer(contractorId, dto) {
+        const buyer = this.buyerRepo.create({ contractorId, ...dto });
+        return this.buyerRepo.save(buyer);
+    }
+    async findBuyers(contractorId) {
+        return this.buyerRepo.find({
+            where: { contractorId },
+            order: { createdAt: 'DESC' },
+        });
     }
     async createBlock(contractorId, projectId, dto) {
         await this.projectsService.findOneForContractor(projectId, contractorId);
@@ -63,6 +75,12 @@ let UnitsService = class UnitsService {
         if (dto.status === unit_entity_1.UnitOwnershipStatus.GIVEN_TO_LAND_OWNER && !dto.landOwnerId) {
             throw new common_1.BadRequestException('Arsa sahibine verildi durumunda landOwnerId zorunludur');
         }
+        if (dto.buyerId) {
+            const buyer = await this.buyerRepo.findOne({ where: { id: dto.buyerId } });
+            if (!buyer || buyer.contractorId !== contractorId) {
+                throw new common_1.ForbiddenException('Bu alıcı kaydına erişim yetkiniz yok');
+            }
+        }
         unit.ownershipStatus = dto.status;
         unit.buyerId = dto.status === unit_entity_1.UnitOwnershipStatus.SOLD ? dto.buyerId : undefined;
         unit.landOwnerId =
@@ -79,7 +97,9 @@ exports.UnitsService = UnitsService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(block_entity_1.Block)),
     __param(1, (0, typeorm_1.InjectRepository)(unit_entity_1.Unit)),
+    __param(2, (0, typeorm_1.InjectRepository)(buyer_entity_1.Buyer)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository,
         projects_service_1.ProjectsService])
 ], UnitsService);

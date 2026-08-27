@@ -3,8 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Block } from './entities/block.entity';
 import { Unit, UnitOwnershipStatus } from './entities/unit.entity';
+import { Buyer } from './entities/buyer.entity';
 import { CreateBlockDto } from './dto/create-block.dto';
 import { CreateUnitDto } from './dto/create-unit.dto';
+import { CreateBuyerDto } from './dto/create-buyer.dto';
 import { UpdateUnitStatusDto } from './dto/update-unit-status.dto';
 import { ProjectsService } from '../projects/projects.service';
 
@@ -13,8 +15,24 @@ export class UnitsService {
   constructor(
     @InjectRepository(Block) private readonly blockRepo: Repository<Block>,
     @InjectRepository(Unit) private readonly unitRepo: Repository<Unit>,
+    @InjectRepository(Buyer) private readonly buyerRepo: Repository<Buyer>,
     private readonly projectsService: ProjectsService,
   ) {}
+
+  // --- Alıcılar ---
+
+  async createBuyer(contractorId: string, dto: CreateBuyerDto): Promise<Buyer> {
+    const buyer = this.buyerRepo.create({ contractorId, ...dto });
+    return this.buyerRepo.save(buyer);
+  }
+
+  // Sadece giriş yapan müteahhidin KENDİ alıcıları -- başkasınınkiler görünmez
+  async findBuyers(contractorId: string): Promise<Buyer[]> {
+    return this.buyerRepo.find({
+      where: { contractorId },
+      order: { createdAt: 'DESC' },
+    });
+  }
 
   async createBlock(contractorId: string, projectId: string, dto: CreateBlockDto): Promise<Block> {
     // Bu projenin gerçekten bu müteahhide ait olduğunu doğrular (yoksa NotFound/Forbidden fırlatır)
@@ -67,6 +85,16 @@ export class UnitsService {
     }
     if (dto.status === UnitOwnershipStatus.GIVEN_TO_LAND_OWNER && !dto.landOwnerId) {
       throw new BadRequestException('Arsa sahibine verildi durumunda landOwnerId zorunludur');
+    }
+
+    // GÜVENLİK: verilen alıcının gerçekten BU müteahhide ait olduğunu doğrula.
+    // Bu kontrol olmasa, bir müteahhit başka birinin alıcı ID'sini kendi dairesine
+    // bağlayabilirdi (ID'yi bir şekilde ele geçirirse).
+    if (dto.buyerId) {
+      const buyer = await this.buyerRepo.findOne({ where: { id: dto.buyerId } });
+      if (!buyer || buyer.contractorId !== contractorId) {
+        throw new ForbiddenException('Bu alıcı kaydına erişim yetkiniz yok');
+      }
     }
 
     unit.ownershipStatus = dto.status;

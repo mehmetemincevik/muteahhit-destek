@@ -15,6 +15,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.RentalsController = exports.AssetsController = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const roles_guard_1 = require("../../common/guards/roles.guard");
+const roles_decorator_1 = require("../../common/decorators/roles.decorator");
 const current_user_decorator_1 = require("../../common/decorators/current-user.decorator");
 const assets_service_1 = require("./assets.service");
 const create_asset_dto_1 = require("./dto/create-asset.dto");
@@ -98,7 +100,8 @@ __decorate([
 ], AssetsController.prototype, "addValueSnapshot", null);
 exports.AssetsController = AssetsController = __decorate([
     (0, common_1.Controller)('assets'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('contractor'),
     __metadata("design:paramtypes", [assets_service_1.AssetsService])
 ], AssetsController);
 let RentalsController = class RentalsController {
@@ -121,7 +124,8 @@ __decorate([
 ], RentalsController.prototype, "addPayment", null);
 exports.RentalsController = RentalsController = __decorate([
     (0, common_1.Controller)('rentals'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('contractor'),
     __metadata("design:paramtypes", [assets_service_1.AssetsService])
 ], RentalsController);
 //# sourceMappingURL=assets.controller.js.map

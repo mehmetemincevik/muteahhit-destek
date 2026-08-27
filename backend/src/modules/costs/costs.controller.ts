@@ -1,5 +1,7 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { CostsService } from './costs.service';
 import { CreateCostCategoryDto } from './dto/create-cost-category.dto';
@@ -9,7 +11,8 @@ import { CreateCostPaymentDto } from './dto/create-cost-payment.dto';
 type AuthUser = { userId: string; role: string };
 
 @Controller()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('contractor') // Maliyet takibi sadece müteahhide ait
 export class CostsController {
   constructor(private readonly costsService: CostsService) {}
 

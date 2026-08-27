@@ -15,6 +15,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CashflowController = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const roles_guard_1 = require("../../common/guards/roles.guard");
+const roles_decorator_1 = require("../../common/decorators/roles.decorator");
 const current_user_decorator_1 = require("../../common/decorators/current-user.decorator");
 const cashflow_service_1 = require("./cashflow.service");
 const create_cashflow_entry_dto_1 = require("./dto/create-cashflow-entry.dto");
@@ -34,9 +36,6 @@ let CashflowController = class CashflowController {
     }
     markAsPaid(entryId, user, dto) {
         return this.cashflowService.markAsPaid(user.userId, entryId, dto);
-    }
-    runDailyAccrual() {
-        return this.cashflowService.runDailyAccrual();
     }
 };
 exports.CashflowController = CashflowController;
@@ -72,15 +71,10 @@ __decorate([
     __metadata("design:paramtypes", [String, Object, mark_as_paid_dto_1.MarkAsPaidDto]),
     __metadata("design:returntype", void 0)
 ], CashflowController.prototype, "markAsPaid", null);
-__decorate([
-    (0, common_1.Post)('run-daily-accrual'),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
-], CashflowController.prototype, "runDailyAccrual", null);
 exports.CashflowController = CashflowController = __decorate([
     (0, common_1.Controller)('cashflow'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('contractor'),
     __metadata("design:paramtypes", [cashflow_service_1.CashflowService])
 ], CashflowController);
 //# sourceMappingURL=cashflow.controller.js.map

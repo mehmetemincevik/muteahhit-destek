@@ -1,5 +1,7 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AssetsService } from './assets.service';
 import { CreateAssetDto } from './dto/create-asset.dto';
@@ -11,7 +13,8 @@ import { CreateValueSnapshotDto } from './dto/create-value-snapshot.dto';
 type AuthUser = { userId: string; role: string };
 
 @Controller('assets')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('contractor') // Varlıklar sadece müteahhide ait kişisel finansal veri
 export class AssetsController {
   constructor(private readonly assetsService: AssetsService) {}
 
@@ -60,7 +63,8 @@ export class AssetsController {
 
 // Kira ödemesi, rental'a bağlı olduğu için ayrı bir controller'da (URL kökü farklı: /rentals/...)
 @Controller('rentals')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('contractor')
 export class RentalsController {
   constructor(private readonly assetsService: AssetsService) {}
 

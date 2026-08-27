@@ -15,14 +15,23 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UnitsController = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const roles_guard_1 = require("../../common/guards/roles.guard");
+const roles_decorator_1 = require("../../common/decorators/roles.decorator");
 const current_user_decorator_1 = require("../../common/decorators/current-user.decorator");
 const units_service_1 = require("./units.service");
 const create_block_dto_1 = require("./dto/create-block.dto");
 const create_unit_dto_1 = require("./dto/create-unit.dto");
+const create_buyer_dto_1 = require("./dto/create-buyer.dto");
 const update_unit_status_dto_1 = require("./dto/update-unit-status.dto");
 let UnitsController = class UnitsController {
     constructor(unitsService) {
         this.unitsService = unitsService;
+    }
+    createBuyer(user, dto) {
+        return this.unitsService.createBuyer(user.userId, dto);
+    }
+    findBuyers(user) {
+        return this.unitsService.findBuyers(user.userId);
     }
     createBlock(projectId, user, dto) {
         return this.unitsService.createBlock(user.userId, projectId, dto);
@@ -38,6 +47,21 @@ let UnitsController = class UnitsController {
     }
 };
 exports.UnitsController = UnitsController;
+__decorate([
+    (0, common_1.Post)('buyers'),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, create_buyer_dto_1.CreateBuyerDto]),
+    __metadata("design:returntype", void 0)
+], UnitsController.prototype, "createBuyer", null);
+__decorate([
+    (0, common_1.Get)('buyers'),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], UnitsController.prototype, "findBuyers", null);
 __decorate([
     (0, common_1.Post)('projects/:projectId/blocks'),
     __param(0, (0, common_1.Param)('projectId')),
@@ -75,7 +99,8 @@ __decorate([
 ], UnitsController.prototype, "updateStatus", null);
 exports.UnitsController = UnitsController = __decorate([
     (0, common_1.Controller)(),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('contractor'),
     __metadata("design:paramtypes", [units_service_1.UnitsService])
 ], UnitsController);
 //# sourceMappingURL=units.controller.js.map

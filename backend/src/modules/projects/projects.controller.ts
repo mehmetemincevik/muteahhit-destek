@@ -1,11 +1,14 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 
 @Controller('projects')
-@UseGuards(JwtAuthGuard) // Bu controller'daki TÜM endpoint'ler giriş yapmayı zorunlu kılar
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('contractor') // Sadece müteahhitler proje oluşturabilir/görebilir
 export class ProjectsController {
   constructor(private readonly projectsService: ProjectsService) {}
 

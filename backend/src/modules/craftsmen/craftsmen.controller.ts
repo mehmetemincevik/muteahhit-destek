@@ -1,5 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { CraftsmenService } from './craftsmen.service';
 import { UpsertProfileDto } from './dto/upsert-profile.dto';
@@ -13,51 +15,55 @@ import { UpdateAssignmentStatusDto } from './dto/update-assignment-status.dto';
 type AuthUser = { userId: string; role: string };
 
 @Controller()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class CraftsmenController {
   constructor(private readonly craftsmenService: CraftsmenService) {}
 
-  // --- Profil (usta kendi profilini yönetir) ---
+  // --- Profil (SADECE usta kendi profilini yönetir) ---
 
   @Post('craftsmen/profile')
+  @Roles('craftsman')
   upsertProfile(@CurrentUser() user: AuthUser, @Body() dto: UpsertProfileDto) {
     return this.craftsmenService.upsertProfile(user.userId, dto);
   }
 
   @Get('craftsmen/profile')
+  @Roles('craftsman')
   getMyProfile(@CurrentUser() user: AuthUser) {
     return this.craftsmenService.getMyProfile(user.userId);
   }
 
-  // --- Genel Arama (müteahhitler ustaları keşfeder -- herkese açık) ---
+  // --- Genel Arama (SADECE müteahhitler usta arar) ---
 
   @Get('craftsmen')
+  @Roles('contractor')
   findAll(@Query('province') province?: string, @Query('district') district?: string) {
     return this.craftsmenService.findAllProfiles({ province, district });
   }
 
-  // ÖNEMLİ: 'craftsmen/my-assignments' gibi SABİT route'lar, aşağıdaki
-  // 'craftsmen/:craftsmanId' gibi PARAMETRELİ route'lardan ÖNCE tanımlanmalı.
-  // Yoksa NestJS "my-assignments" kelimesini craftsmanId parametresi sanıp yanlış
-  // metodu (getProfileDetail) çağırır -- bu hatayı test sırasında yakaladık.
+  // ÖNEMLİ: sabit route'lar parametreli route'lardan ÖNCE tanımlanmalı (bkz. önceki hata).
   @Get('craftsmen/my-assignments')
+  @Roles('craftsman')
   findMyAssignments(@CurrentUser() user: AuthUser) {
     return this.craftsmenService.findAssignmentsForCraftsman(user.userId);
   }
 
   @Get('craftsmen/:craftsmanId')
+  @Roles('contractor')
   getProfileDetail(@Param('craftsmanId') craftsmanId: string) {
     return this.craftsmenService.getProfileDetail(craftsmanId);
   }
 
-  // --- Hizmet Paketleri ---
+  // --- Hizmet Paketleri (SADECE usta kendi paketini yönetir) ---
 
   @Post('craftsmen/packages')
+  @Roles('craftsman')
   createPackage(@CurrentUser() user: AuthUser, @Body() dto: CreatePackageDto) {
     return this.craftsmenService.createPackage(user.userId, dto);
   }
 
   @Post('craftsmen/packages/:packageId/items')
+  @Roles('craftsman')
   addPackageItem(
     @Param('packageId') packageId: string,
     @CurrentUser() user: AuthUser,
@@ -66,23 +72,26 @@ export class CraftsmenController {
     return this.craftsmenService.addPackageItem(user.userId, packageId, dto);
   }
 
-  // --- Portfolyo ---
+  // --- Portfolyo (SADECE usta) ---
 
   @Post('craftsmen/portfolio')
+  @Roles('craftsman')
   addPortfolioImage(@CurrentUser() user: AuthUser, @Body() dto: AddPortfolioImageDto) {
     return this.craftsmenService.addPortfolioImage(user.userId, dto);
   }
 
-  // --- Yorumlar ---
+  // --- Yorumlar (SADECE müteahhit ustayı değerlendirir) ---
 
   @Post('craftsmen/reviews')
+  @Roles('contractor')
   createReview(@CurrentUser() user: AuthUser, @Body() dto: CreateReviewDto) {
     return this.craftsmenService.createReview(user.userId, dto);
   }
 
-  // --- Proje Atamaları ---
+  // --- Proje Atamaları (SADECE müteahhit yönetir) ---
 
   @Post('projects/:projectId/assignments')
+  @Roles('contractor')
   createAssignment(
     @Param('projectId') projectId: string,
     @CurrentUser() user: AuthUser,
@@ -92,11 +101,13 @@ export class CraftsmenController {
   }
 
   @Get('projects/:projectId/assignments')
+  @Roles('contractor')
   findAssignmentsByProject(@Param('projectId') projectId: string, @CurrentUser() user: AuthUser) {
     return this.craftsmenService.findAssignmentsByProject(user.userId, projectId);
   }
 
   @Patch('assignments/:assignmentId/status')
+  @Roles('contractor')
   updateAssignmentStatus(
     @Param('assignmentId') assignmentId: string,
     @CurrentUser() user: AuthUser,

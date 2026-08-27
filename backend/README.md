@@ -48,7 +48,20 @@ npm run migration:run
 Bu komut, birlikte tasarladığımız tüm tabloları (`users`, `projects`, `units`,
 `payments`, `costs`, ... 8 modülün tamamı) veritabanında oluşturur.
 
-### 6) Sunucuyu Başlat
+### 6) Sistem API Anahtarını Ayarla
+`.env` dosyandaki `SYSTEM_API_KEY` değerini production'a geçmeden önce **mutlaka**
+uzun, rastgele bir değerle değiştir.
+
+**Not:** Günlük faiz işletme artık **uygulamanın kendi zamanlayıcısı** ile otomatik
+çalışıyor (her gece 00:05, `@nestjs/schedule` kullanılarak) -- n8n'e ya da başka bir dış
+tetikleyiciye ihtiyaç YOK. `SYSTEM_API_KEY` sadece **manuel test/tekrar çalıştırma**
+istersen kullanılır:
+```
+POST http://sunucun/system/cashflow/run-daily-accrual
+Header: X-API-Key: <senin SYSTEM_API_KEY değerin>
+```
+
+### 7) Sunucuyu Başlat
 ```bash
 npm run start:dev
 ```

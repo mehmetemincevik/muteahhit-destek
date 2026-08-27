@@ -1,9 +1,26 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  CreateDateColumn,
+} from 'typeorm';
+import { User } from '../../users/entities/user.entity';
 
+// Daire alıcıları (uygulama içi kullanıcı değil, sadece müteahhidin tuttuğu bilgi kaydı).
+// Her alıcı BİR müteahhide aittir -- başka müteahhitler bu kaydı göremez (kişisel veri).
 @Entity('buyers')
 export class Buyer {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @Column({ name: 'contractor_id', type: 'uuid' })
+  contractorId: string;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'contractor_id' })
+  contractor: User;
 
   @Column({ name: 'full_name', type: 'varchar', length: 150 })
   fullName: string;

@@ -11,9 +11,11 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var CashflowService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CashflowService = void 0;
 const common_1 = require("@nestjs/common");
+const schedule_1 = require("@nestjs/schedule");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const cashflow_calendar_entity_1 = require("./entities/cashflow-calendar.entity");
@@ -21,7 +23,7 @@ const cashflow_interest_accrual_entity_1 = require("./entities/cashflow-interest
 const asset_transaction_entity_1 = require("../assets/entities/asset-transaction.entity");
 const payments_service_1 = require("../payments/payments.service");
 const assets_service_1 = require("../assets/assets.service");
-let CashflowService = class CashflowService {
+let CashflowService = CashflowService_1 = class CashflowService {
     constructor(calendarRepo, accrualRepo, assetTransactionRepo, dataSource, paymentsService, assetsService) {
         this.calendarRepo = calendarRepo;
         this.accrualRepo = accrualRepo;
@@ -29,6 +31,7 @@ let CashflowService = class CashflowService {
         this.dataSource = dataSource;
         this.paymentsService = paymentsService;
         this.assetsService = assetsService;
+        this.logger = new common_1.Logger(CashflowService_1.name);
     }
     async create(contractorId, dto) {
         let sourceTable;
@@ -130,6 +133,12 @@ let CashflowService = class CashflowService {
         entry.paidDate = new Date(dto.paidDate);
         return this.calendarRepo.save(entry);
     }
+    async handleDailyAccrualCron() {
+        this.logger.log('Günlük faiz işletme zamanlayıcısı başladı...');
+        const result = await this.runDailyAccrual();
+        this.logger.log(`Tamamlandı: ${result.markedOverdue} kayıt gecikmiş işaretlendi, ` +
+            `${result.interestApplied} kayda faiz işlendi, ${result.skipped} kayıt atlandı.`);
+    }
     async runDailyAccrual() {
         const overdueResult = await this.dataSource.query(`UPDATE cashflow_calendar
        SET status = 'overdue', updated_at = now()
@@ -164,7 +173,13 @@ let CashflowService = class CashflowService {
     }
 };
 exports.CashflowService = CashflowService;
-exports.CashflowService = CashflowService = __decorate([
+__decorate([
+    (0, schedule_1.Cron)('5 0 * * *'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], CashflowService.prototype, "handleDailyAccrualCron", null);
+exports.CashflowService = CashflowService = CashflowService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(cashflow_calendar_entity_1.CashflowCalendar)),
     __param(1, (0, typeorm_1.InjectRepository)(cashflow_interest_accrual_entity_1.CashflowInterestAccrual)),

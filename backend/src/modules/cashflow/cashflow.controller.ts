@@ -1,5 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { CashflowService } from './cashflow.service';
 import { CreateCashflowEntryDto } from './dto/create-cashflow-entry.dto';
@@ -7,8 +9,11 @@ import { MarkAsPaidDto } from './dto/mark-as-paid.dto';
 
 type AuthUser = { userId: string; role: string };
 
+// NOT: run-daily-accrual buradan kaldırıldı, ayrı bir sistem controller'ına taşındı
+// (bkz. cashflow-system.controller.ts) -- kullanıcı auth'u ile sistem auth'unu karıştırmamak için.
 @Controller('cashflow')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('contractor')
 export class CashflowController {
   constructor(private readonly cashflowService: CashflowService) {}
 
@@ -34,13 +39,5 @@ export class CashflowController {
     @Body() dto: MarkAsPaidDto,
   ) {
     return this.cashflowService.markAsPaid(user.userId, entryId, dto);
-  }
-
-  // n8n (ya da manuel test) tarafından günde bir kez tetiklenecek.
-  // NOT: Bilerek @CurrentUser() KULLANMIYORUZ -- bu tüm müteahhitler için toplu çalışan
-  // sistem geneli bir işlem, tek bir kullanıcıya özel değil.
-  @Post('run-daily-accrual')
-  runDailyAccrual() {
-    return this.cashflowService.runDailyAccrual();
   }
 }

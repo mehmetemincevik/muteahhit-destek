@@ -5,6 +5,7 @@ import { CashflowInterestAccrual } from './entities/cashflow-interest-accrual.en
 import { AssetTransaction } from '../assets/entities/asset-transaction.entity';
 import { CashflowService } from './cashflow.service';
 import { CashflowController } from './cashflow.controller';
+import { CashflowSystemController } from './cashflow-system.controller';
 import { PaymentsModule } from '../payments/payments.module';
 import { AssetsModule } from '../assets/assets.module';
 
@@ -14,7 +15,7 @@ import { AssetsModule } from '../assets/assets.module';
     PaymentsModule, // PaymentsService (markAsPaid -> installment_payment için)
     AssetsModule, // AssetsService (markAsPaid -> rent için)
   ],
-  controllers: [CashflowController],
+  controllers: [CashflowController, CashflowSystemController],
   providers: [CashflowService],
 })
 export class CashflowModule {}

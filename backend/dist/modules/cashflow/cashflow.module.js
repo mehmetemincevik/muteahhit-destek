@@ -14,6 +14,7 @@ const cashflow_interest_accrual_entity_1 = require("./entities/cashflow-interest
 const asset_transaction_entity_1 = require("../assets/entities/asset-transaction.entity");
 const cashflow_service_1 = require("./cashflow.service");
 const cashflow_controller_1 = require("./cashflow.controller");
+const cashflow_system_controller_1 = require("./cashflow-system.controller");
 const payments_module_1 = require("../payments/payments.module");
 const assets_module_1 = require("../assets/assets.module");
 let CashflowModule = class CashflowModule {
@@ -26,7 +27,7 @@ exports.CashflowModule = CashflowModule = __decorate([
             payments_module_1.PaymentsModule,
             assets_module_1.AssetsModule,
         ],
-        controllers: [cashflow_controller_1.CashflowController],
+        controllers: [cashflow_controller_1.CashflowController, cashflow_system_controller_1.CashflowSystemController],
         providers: [cashflow_service_1.CashflowService],
     })
 ], CashflowModule);

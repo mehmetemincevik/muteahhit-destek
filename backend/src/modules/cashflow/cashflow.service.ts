@@ -1,4 +1,5 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import {
@@ -15,6 +16,8 @@ import { AssetsService } from '../assets/assets.service';
 
 @Injectable()
 export class CashflowService {
+  private readonly logger = new Logger(CashflowService.name);
+
   constructor(
     @InjectRepository(CashflowCalendar) private readonly calendarRepo: Repository<CashflowCalendar>,
     @InjectRepository(CashflowInterestAccrual)
@@ -154,8 +157,24 @@ export class CashflowService {
     return this.calendarRepo.save(entry);
   }
 
-  // --- Günlük Faiz İşletme (n8n tarafından günde bir kez POST /cashflow/run-daily-accrual ile tetiklenecek) ---
+  // --- Günlük Faiz İşletme ---
 
+  // Uygulama içi zamanlayıcı: her gece 00:05'te OTOMATİK çalışır, n8n gibi dış bir araca
+  // ihtiyaç YOK. '5 0 * * *' = "her gün saat 00:05'te" (cron syntax: dakika saat gün ay haftagünü).
+  // Sunucu Türkiye saatinde çalışıyorsa bu saat de Türkiye saatine göre olur.
+  @Cron('5 0 * * *')
+  async handleDailyAccrualCron(): Promise<void> {
+    this.logger.log('Günlük faiz işletme zamanlayıcısı başladı...');
+    const result = await this.runDailyAccrual();
+    this.logger.log(
+      `Tamamlandı: ${result.markedOverdue} kayıt gecikmiş işaretlendi, ` +
+        `${result.interestApplied} kayda faiz işlendi, ${result.skipped} kayıt atlandı.`,
+    );
+  }
+
+  // API key korumalı endpoint tarafından (manuel tetikleme/test/tekrar çalıştırma için) VE
+  // yukarıdaki cron tarafından (otomatik günlük çalışma için) çağrılır. Aynı gün için mükerrer
+  // çalıştırılsa bile ON CONFLICT DO NOTHING sayesinde güvenlidir (bkz. aşağıdaki mantık).
   async runDailyAccrual(): Promise<{ markedOverdue: number; interestApplied: number; skipped: number }> {
     // 1) Vadesi geçmiş ama hâlâ 'pending' olan kayıtları 'overdue' yap
     const overdueResult = await this.dataSource.query(
