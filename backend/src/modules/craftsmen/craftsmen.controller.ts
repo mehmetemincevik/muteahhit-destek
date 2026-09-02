@@ -1,4 +1,17 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -8,6 +21,7 @@ import { UpsertProfileDto } from './dto/upsert-profile.dto';
 import { CreatePackageDto } from './dto/create-package.dto';
 import { CreatePackageItemDto } from './dto/create-package-item.dto';
 import { AddPortfolioImageDto } from './dto/add-portfolio-image.dto';
+import { UploadPortfolioImageDto } from './dto/upload-portfolio-image.dto';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { CreateAssignmentDto } from './dto/create-assignment.dto';
 import { UpdateAssignmentStatusDto } from './dto/update-assignment-status.dto';
@@ -75,10 +89,33 @@ export class CraftsmenController {
 
   // Portfolyo görselleri.
 
+  // Dış adres ile ekleme. Yükleme akışı eklendikten sonra da korunuyor: halihazırda
+  // barındırılan görseller bu uçla kaydedilebiliyor.
   @Post('craftsmen/portfolio')
   @Roles('craftsman')
   addPortfolioImage(@CurrentUser() user: AuthUser, @Body() dto: AddPortfolioImageDto) {
     return this.craftsmenService.addPortfolioImage(user.userId, dto);
+  }
+
+  // Dosya yükleyerek ekleme. Alan adı 'file', gövde multipart/form-data.
+  //
+  // Dosya belleğe alınır (memoryStorage); 8 MB sınırı StorageService tarafında da
+  // denetleniyor, buradaki limit isteğin diske hiç yazılmadan reddedilmesini sağlıyor.
+  @Post('craftsmen/portfolio/upload')
+  @Roles('craftsman')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 8 * 1024 * 1024 } }))
+  uploadPortfolioImage(
+    @CurrentUser() user: AuthUser,
+    @UploadedFile() file: Express.Multer.File,
+    @Body() dto: UploadPortfolioImageDto,
+  ) {
+    return this.craftsmenService.uploadPortfolioImage(user.userId, file, dto);
+  }
+
+  @Delete('craftsmen/portfolio/:imageId')
+  @Roles('craftsman')
+  deletePortfolioImage(@Param('imageId') imageId: string, @CurrentUser() user: AuthUser) {
+    return this.craftsmenService.deletePortfolioImage(user.userId, imageId);
   }
 
   // Değerlendirmeler: yalnızca müteahhit yazar.

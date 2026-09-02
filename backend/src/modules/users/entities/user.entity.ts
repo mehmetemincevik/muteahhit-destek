@@ -30,9 +30,10 @@ export class User {
   @Column({ type: 'varchar', length: 150, nullable: true })
   email?: string;
 
-  // bcrypt hash'i. Hiçbir API yanıtına dahil edilmemeli; yanıt alanları
-  // AuthService içinde tek tek seçilerek oluşturulur.
-  @Column({ name: 'password_hash', type: 'text' })
+  // bcrypt hash'i. select: false ile varsayılan sorgulardan çıkarılır; User bir ilişki
+  // olarak yüklendiğinde (örn. conversations -> craftsman -> user) yanıta sızmaması için.
+  // Doğrulama sırasında açıkça seçilmesi gerekir (bkz. AuthService.login).
+  @Column({ name: 'password_hash', type: 'text', select: false })
   passwordHash: string;
 
   @CreateDateColumn({ name: 'created_at' })

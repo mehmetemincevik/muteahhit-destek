@@ -40,7 +40,7 @@ __decorate([
     __metadata("design:type", String)
 ], User.prototype, "email", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ name: 'password_hash', type: 'text' }),
+    (0, typeorm_1.Column)({ name: 'password_hash', type: 'text', select: false }),
     __metadata("design:type", String)
 ], User.prototype, "passwordHash", void 0);
 __decorate([

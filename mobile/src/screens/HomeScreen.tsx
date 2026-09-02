@@ -5,6 +5,9 @@ import { useAuth } from '../context/AuthContext';
 import { fetchProjects } from '../api/projects';
 import { Project } from '../types/project';
 import { colors, spacing, typeScale, fonts } from '../theme/tokens';
+import { Badge } from '../components/Badge';
+import { fetchNotificationSummary } from '../api/notifications';
+import { NotificationSummary } from '../types/notification';
 
 const STATUS_LABELS: Record<string, string> = {
   planning: 'Planlama',
@@ -17,11 +20,17 @@ export default function HomeScreen({ navigation }: any) {
   const { user, logout } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [summary, setSummary] = useState<NotificationSummary | null>(null);
 
   async function loadProjects() {
     try {
-      const data = await fetchProjects();
+      // Sayaçlar ekran her odaklandığında tazelenir; ayrı bir yenileme mekanizması yok.
+      const [data, summaryData] = await Promise.all([
+        fetchProjects(),
+        fetchNotificationSummary().catch(() => null),
+      ]);
       setProjects(data);
+      setSummary(summaryData);
     } catch (error: any) {
       Alert.alert('Bağlantı hatası', 'Projeler yüklenemedi. Backend çalışıyor mu?');
     } finally {
@@ -51,6 +60,17 @@ export default function HomeScreen({ navigation }: any) {
         <View style={styles.quickLinks}>
           <TouchableOpacity style={styles.quickLink} onPress={() => navigation.navigate('Cashflow')}>
             <Text style={styles.quickLinkText}>TAKVİM →</Text>
+            <Badge count={summary?.overdueEntries ?? 0} tone="danger" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.quickLink} onPress={() => navigation.navigate('Assets')}>
+            <Text style={styles.quickLinkText}>VARLIKLAR →</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.quickLink} onPress={() => navigation.navigate('CraftsmenSearch')}>
+            <Text style={styles.quickLinkText}>USTA ARA →</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.quickLink} onPress={() => navigation.navigate('Conversations')}>
+            <Text style={styles.quickLinkText}>MESAJLAR →</Text>
+            <Badge count={(summary?.unreadMessages ?? 0) + (summary?.pendingOffers ?? 0)} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.quickLink} onPress={() => navigation.navigate('SelectBuyer')}>
             <Text style={styles.quickLinkText}>ALICILAR →</Text>
@@ -79,7 +99,13 @@ export default function HomeScreen({ navigation }: any) {
         renderItem={({ item }) => (
           <TouchableOpacity
             style={styles.projectRow}
-            onPress={() => navigation.navigate('ProjectDetail', { projectId: item.id, projectName: item.name })}
+            onPress={() =>
+              navigation.navigate('ProjectDetail', {
+                projectId: item.id,
+                projectName: item.name,
+                isPublic: item.isPublic,
+              })
+            }
           >
             <View style={styles.projectRowLeft}>
               <Text style={styles.projectName}>{item.name}</Text>
@@ -112,11 +138,15 @@ const styles = StyleSheet.create({
   logoutText: { ...typeScale.bodyMuted, textDecorationLine: 'underline' },
   quickLinks: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.sm,
     marginHorizontal: spacing.lg,
     marginBottom: spacing.lg,
   },
   quickLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderWidth: 1,

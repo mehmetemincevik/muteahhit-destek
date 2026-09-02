@@ -4,6 +4,7 @@ import { createCashflowEntryRequest } from '../api/cashflow';
 import { CashflowDirection, CashflowEntryType } from '../types/cashflow';
 import { Button } from '../components/Button';
 import { TextField } from '../components/TextField';
+import { DateField } from '../components/DateField';
 import { colors, spacing, typeScale, fonts, radius } from '../theme/tokens';
 import { parseAmount } from '../utils/format';
 
@@ -37,8 +38,8 @@ export default function CreateCashflowEntryScreen({ navigation }: any) {
       Alert.alert('Geçersiz tutar', 'Sıfırdan büyük bir tutar gir');
       return;
     }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
-      Alert.alert('Geçersiz tarih', 'Vade tarihini YYYY-AA-GG şeklinde gir (örn. 2026-09-15)');
+    if (!dueDate) {
+      Alert.alert('Eksik bilgi', 'Vade tarihi seçin');
       return;
     }
 
@@ -127,12 +128,7 @@ export default function CreateCashflowEntryScreen({ navigation }: any) {
         keyboardType="decimal-pad"
         placeholder="örn. 150000"
       />
-      <TextField
-        label="Vade Tarihi *"
-        value={dueDate}
-        onChangeText={setDueDate}
-        placeholder="YYYY-AA-GG"
-      />
+      <DateField label="Vade Tarihi *" value={dueDate} onChange={setDueDate} />
 
       <View style={styles.interestToggle}>
         <View style={{ flex: 1 }}>

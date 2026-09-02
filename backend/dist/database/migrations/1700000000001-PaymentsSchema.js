@@ -45,7 +45,7 @@ GROUP BY u.id, u.sale_price;
     `);
     }
     async down(queryRunner) {
-        throw new Error('Bu migration için down() henüz yazılmadı -- elle geri almanız gerekir.');
+        throw new Error('down() tanımlı değil; geri alma elle yapılmalıdır.');
     }
 }
 exports.PaymentsSchema1700000000001 = PaymentsSchema1700000000001;

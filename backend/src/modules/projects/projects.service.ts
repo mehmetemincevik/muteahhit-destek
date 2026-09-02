@@ -5,11 +5,15 @@ import { Project } from './entities/project.entity';
 import { Land } from './entities/land.entity';
 import { LandOwner } from './entities/land-owner.entity';
 import { CreateProjectDto } from './dto/create-project.dto';
+import { UpdateProjectDto } from './dto/update-project.dto';
+import { LandOwnerDto } from './dto/land-owner.dto';
 
 @Injectable()
 export class ProjectsService {
   constructor(
     @InjectRepository(Project) private readonly projectRepo: Repository<Project>,
+    @InjectRepository(Land) private readonly landRepo: Repository<Land>,
+    @InjectRepository(LandOwner) private readonly landOwnerRepo: Repository<LandOwner>,
     @InjectDataSource() private readonly dataSource: DataSource,
   ) {}
 
@@ -26,9 +30,17 @@ export class ProjectsService {
       });
       await manager.save(project);
 
-      // Arsa alanlarından en az biri doluysa land kaydı açılır.
+      // Arsa bilgisi veya arsa sahibi girildiyse land kaydı açılır. Sahipler land'e bağlı
+      // olduğu için, yalnızca sahip girilen (konum/bedel girilmeyen) kat karşılığı
+      // projelerde de kayıt oluşturulmalı; aksi halde sahipler sessizce kaybolur.
       const hasLandInfo =
-        dto.province || dto.district || dto.areaM2 || dto.purchasePrice || dto.adaNo;
+        dto.province ||
+        dto.district ||
+        dto.areaM2 ||
+        dto.purchasePrice ||
+        dto.adaNo ||
+        dto.isKatKarsiligi ||
+        (dto.owners?.length ?? 0) > 0;
 
       if (hasLandInfo) {
         const land = manager.create(Land, {
@@ -87,5 +99,74 @@ export class ProjectsService {
     }
 
     return project;
+  }
+
+  async update(contractorId: string, id: string, dto: UpdateProjectDto): Promise<Project> {
+    const project = await this.findOneForContractor(id, contractorId);
+
+    if (dto.name !== undefined) project.name = dto.name;
+    if (dto.status !== undefined) project.status = dto.status;
+    if (dto.estimatedOccupancyDate !== undefined) {
+      project.estimatedOccupancyDate = new Date(dto.estimatedOccupancyDate);
+    }
+    if (dto.isPublic !== undefined) project.isPublic = dto.isPublic;
+    if (dto.publicNote !== undefined) project.publicNote = dto.publicNote;
+
+    return this.projectRepo.save(project);
+  }
+
+  // Projenin arsa sahipleri. Kat karşılığı daire teslimi bu kayıtlara bağlandığı için
+  // (units.land_owner_id) seçim ekranlarında listelenir.
+  async findLandOwners(contractorId: string, projectId: string): Promise<LandOwner[]> {
+    await this.findOneForContractor(projectId, contractorId);
+
+    const land = await this.landRepo.findOne({ where: { projectId } });
+    if (!land) {
+      // Arsa kaydı olmayan projede sahip de yoktur; hata yerine boş liste dönmek
+      // çağıran ekranların ayrı bir durum yönetmesini gereksiz kılıyor.
+      return [];
+    }
+    return this.landOwnerRepo.find({ where: { landId: land.id }, order: { fullName: 'ASC' } });
+  }
+
+  // Proje oluşturulduktan sonra arsa sahibi eklemek için. Arsa kaydı yoksa oluşturulur;
+  // hisseli tapularda sahiplerin sonradan girilmesi yaygın.
+  async addLandOwner(
+    contractorId: string,
+    projectId: string,
+    dto: LandOwnerDto,
+  ): Promise<LandOwner> {
+    await this.findOneForContractor(projectId, contractorId);
+
+    let land = await this.landRepo.findOne({ where: { projectId } });
+    if (!land) {
+      land = await this.landRepo.save(this.landRepo.create({ projectId }));
+    }
+
+    const owner = this.landOwnerRepo.create({ landId: land.id, ...dto });
+    return this.landOwnerRepo.save(owner);
+  }
+
+  // Bir arsa sahibi kaydının bu müteahhide ait olup olmadığını doğrular.
+  // UnitsService, daireyi arsa sahibine devrederken bu kontrolü kullanır.
+  async assertLandOwnerBelongsToContractor(
+    contractorId: string,
+    landOwnerId: string,
+  ): Promise<void> {
+    const owner = await this.landOwnerRepo.findOne({
+      where: { id: landOwnerId },
+      relations: ['land', 'land.project'],
+    });
+    if (!owner || owner.land.project.contractorId !== contractorId) {
+      throw new ForbiddenException('Bu arsa sahibi kaydına erişim yetkiniz yok');
+    }
+  }
+
+  // Ustalara açık ilan listesi. public_project_listings view'ı yalnızca tanıtıcı alanları
+  // içerir; maliyet, satış fiyatı ve arsa bedeli gibi finansal veriler dışarıda kalır.
+  async findPublicListings(): Promise<unknown[]> {
+    return this.dataSource.query(
+      'SELECT * FROM public_project_listings ORDER BY estimated_occupancy_date NULLS LAST',
+    );
   }
 }

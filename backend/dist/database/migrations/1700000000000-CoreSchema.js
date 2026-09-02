@@ -116,7 +116,7 @@ CREATE TABLE units (
     net_m2              NUMERIC(8,2),
 
     -- Durum: boşta / satıldı / arsa sahibine verildi -- ikisi aynı anda olabileceği için
-    -- ayrı iki boolean + bağımsız fark ödeme mantığı kullanıyoruz (aşağıya bkz.)
+    -- ownership_status tek durum tutar; fark ödemeleri unit_adjustments tablosunda ayrıca izlenir.
     ownership_status    VARCHAR(30) NOT NULL DEFAULT 'available'
                             CHECK (ownership_status IN ('available', 'sold', 'given_to_land_owner')),
 
@@ -193,7 +193,7 @@ CREATE TABLE unit_adjustments (
     `);
     }
     async down(queryRunner) {
-        throw new Error('Bu migration için down() henüz yazılmadı -- elle geri almanız gerekir.');
+        throw new Error('down() tanımlı değil; geri alma elle yapılmalıdır.');
     }
 }
 exports.CoreSchema1700000000000 = CoreSchema1700000000000;

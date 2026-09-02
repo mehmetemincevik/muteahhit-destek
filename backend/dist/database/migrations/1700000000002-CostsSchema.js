@@ -40,13 +40,13 @@ CREATE TABLE cost_items (
                         CHECK (source IN ('manual', 'architectural_project', 'static_project')),
 
     -- Malzeme sınıfı bilgisi (demir S420 gibi) genel amaçlı JSON alanda tutulur,
-    -- her malzeme türü farklı özellik istediği için sabit kolon yerine esnek alan kullanıyoruz
+    -- her malzeme türü farklı özellik taşıdığı için sabit kolon yerine esnek alan
     extra_specs     JSONB,   -- örn: {"malzeme_sinifi": "S420", "kat": "Zemin"}
 
     incurred_date    DATE,   -- maliyetin oluştuğu/ödendiği tarih
     -- NOT: is_paid kaldırıldı -- cost_items KISMİ ÖDENEBİLİR (örn. demir siparişine önce avans,
     -- sonra kalan). Ödeme durumu artık aşağıdaki cost_payments tablosundan hesaplanır
-    -- (units/payments ile tamamen aynı mantık: bkz. cost_payment_summary view).
+    -- Bakiye cost_item_payment_summary view'ından hesaplanır.
     created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -93,7 +93,7 @@ GROUP BY ci.project_id, cc.cost_type, cc.name;
     `);
     }
     async down(queryRunner) {
-        throw new Error('Bu migration için down() henüz yazılmadı -- elle geri almanız gerekir.');
+        throw new Error('down() tanımlı değil; geri alma elle yapılmalıdır.');
     }
 }
 exports.CostsSchema1700000000002 = CostsSchema1700000000002;

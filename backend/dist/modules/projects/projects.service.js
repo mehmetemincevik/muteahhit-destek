@@ -20,8 +20,10 @@ const project_entity_1 = require("./entities/project.entity");
 const land_entity_1 = require("./entities/land.entity");
 const land_owner_entity_1 = require("./entities/land-owner.entity");
 let ProjectsService = class ProjectsService {
-    constructor(projectRepo, dataSource) {
+    constructor(projectRepo, landRepo, landOwnerRepo, dataSource) {
         this.projectRepo = projectRepo;
+        this.landRepo = landRepo;
+        this.landOwnerRepo = landOwnerRepo;
         this.dataSource = dataSource;
     }
     async create(contractorId, dto) {
@@ -34,7 +36,13 @@ let ProjectsService = class ProjectsService {
                     : undefined,
             });
             await manager.save(project);
-            const hasLandInfo = dto.province || dto.district || dto.areaM2 || dto.purchasePrice || dto.adaNo;
+            const hasLandInfo = dto.province ||
+                dto.district ||
+                dto.areaM2 ||
+                dto.purchasePrice ||
+                dto.adaNo ||
+                dto.isKatKarsiligi ||
+                (dto.owners?.length ?? 0) > 0;
             if (hasLandInfo) {
                 const land = manager.create(land_entity_1.Land, {
                     projectId: project.id,
@@ -81,13 +89,61 @@ let ProjectsService = class ProjectsService {
         }
         return project;
     }
+    async update(contractorId, id, dto) {
+        const project = await this.findOneForContractor(id, contractorId);
+        if (dto.name !== undefined)
+            project.name = dto.name;
+        if (dto.status !== undefined)
+            project.status = dto.status;
+        if (dto.estimatedOccupancyDate !== undefined) {
+            project.estimatedOccupancyDate = new Date(dto.estimatedOccupancyDate);
+        }
+        if (dto.isPublic !== undefined)
+            project.isPublic = dto.isPublic;
+        if (dto.publicNote !== undefined)
+            project.publicNote = dto.publicNote;
+        return this.projectRepo.save(project);
+    }
+    async findLandOwners(contractorId, projectId) {
+        await this.findOneForContractor(projectId, contractorId);
+        const land = await this.landRepo.findOne({ where: { projectId } });
+        if (!land) {
+            return [];
+        }
+        return this.landOwnerRepo.find({ where: { landId: land.id }, order: { fullName: 'ASC' } });
+    }
+    async addLandOwner(contractorId, projectId, dto) {
+        await this.findOneForContractor(projectId, contractorId);
+        let land = await this.landRepo.findOne({ where: { projectId } });
+        if (!land) {
+            land = await this.landRepo.save(this.landRepo.create({ projectId }));
+        }
+        const owner = this.landOwnerRepo.create({ landId: land.id, ...dto });
+        return this.landOwnerRepo.save(owner);
+    }
+    async assertLandOwnerBelongsToContractor(contractorId, landOwnerId) {
+        const owner = await this.landOwnerRepo.findOne({
+            where: { id: landOwnerId },
+            relations: ['land', 'land.project'],
+        });
+        if (!owner || owner.land.project.contractorId !== contractorId) {
+            throw new common_1.ForbiddenException('Bu arsa sahibi kaydına erişim yetkiniz yok');
+        }
+    }
+    async findPublicListings() {
+        return this.dataSource.query('SELECT * FROM public_project_listings ORDER BY estimated_occupancy_date NULLS LAST');
+    }
 };
 exports.ProjectsService = ProjectsService;
 exports.ProjectsService = ProjectsService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(project_entity_1.Project)),
-    __param(1, (0, typeorm_1.InjectDataSource)()),
+    __param(1, (0, typeorm_1.InjectRepository)(land_entity_1.Land)),
+    __param(2, (0, typeorm_1.InjectRepository)(land_owner_entity_1.LandOwner)),
+    __param(3, (0, typeorm_1.InjectDataSource)()),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.DataSource])
 ], ProjectsService);
 //# sourceMappingURL=projects.service.js.map

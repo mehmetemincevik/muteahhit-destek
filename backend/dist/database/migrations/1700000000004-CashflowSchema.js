@@ -29,7 +29,7 @@ CREATE TABLE cashflow_calendar (
 
     title           VARCHAR(200) NOT NULL,        -- "Çimento Bayii Çeki", "Kadıköy Daire Kirası" gibi
     original_amount NUMERIC(14,2) NOT NULL,        -- ilk belirlenen tutar (faizsiz)
-    current_amount  NUMERIC(14,2) NOT NULL,         -- GÜNCEL bakiye -- gecikme faiziyle birlikte artan tutar
+    current_amount  NUMERIC(14,2) NOT NULL,         -- gecikme faizi dahil güncel tutar
                                                        -- (başlangıçta original_amount ile aynı)
 
     due_date        DATE NOT NULL,                  -- vade tarihi
@@ -85,7 +85,7 @@ CREATE TABLE cashflow_interest_accruals (
     `);
     }
     async down(queryRunner) {
-        throw new Error('Bu migration için down() henüz yazılmadı -- elle geri almanız gerekir.');
+        throw new Error('down() tanımlı değil; geri alma elle yapılmalıdır.');
     }
 }
 exports.CashflowSchema1700000000004 = CashflowSchema1700000000004;

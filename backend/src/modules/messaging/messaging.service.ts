@@ -89,10 +89,15 @@ export class MessagingService {
     return this.conversationRepo.save(conversation);
   }
 
+  // Liste ekranında proje adı ve karşı tarafın kim olduğu gösterildiği için ilişkiler
+  // birlikte yüklenir.
   async findConversationsForUser(user: AuthUser): Promise<Conversation[]> {
+    const relations = ['project', 'craftsman', 'craftsman.user', 'contractor'];
+
     if (user.role === 'contractor') {
       return this.conversationRepo.find({
         where: { contractorId: user.userId },
+        relations,
         order: { lastMessageAt: 'DESC' },
       });
     }
@@ -102,6 +107,7 @@ export class MessagingService {
     }
     return this.conversationRepo.find({
       where: { craftsmanId: ownProfile.id },
+      relations,
       order: { lastMessageAt: 'DESC' },
     });
   }
@@ -121,8 +127,11 @@ export class MessagingService {
       .andWhere('read_at IS NULL')
       .execute();
 
+    // Teklif mesajlarının tutar ve durumu offers tablosunda tutulduğu için ilişki
+    // birlikte yüklenir; metin mesajlarında bu alan boş kalır.
     return this.messageRepo.find({
       where: { conversationId },
+      relations: ['offer'],
       order: { createdAt: 'ASC' },
     });
   }

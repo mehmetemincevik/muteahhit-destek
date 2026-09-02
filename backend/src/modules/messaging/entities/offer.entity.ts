@@ -3,6 +3,7 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
+  OneToOne,
   JoinColumn,
   CreateDateColumn,
 } from 'typeorm';
@@ -30,7 +31,7 @@ export class Offer {
   @Column({ name: 'message_id', type: 'uuid', unique: true })
   messageId: string;
 
-  @ManyToOne(() => Message)
+  @OneToOne(() => Message, (message) => message.offer)
   @JoinColumn({ name: 'message_id' })
   message: Message;
 

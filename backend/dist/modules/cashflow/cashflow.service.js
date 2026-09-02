@@ -88,50 +88,52 @@ let CashflowService = CashflowService_1 = class CashflowService {
         if (entry.status === cashflow_calendar_entity_1.CashflowStatus.PAID) {
             throw new common_1.BadRequestException('Bu kayıt zaten ödendi olarak işaretlenmiş');
         }
-        switch (entry.entryType) {
-            case cashflow_calendar_entity_1.CashflowEntryType.INSTALLMENT_PAYMENT: {
-                if (!entry.sourceId) {
-                    throw new common_1.BadRequestException('Bu kayıt oluşturulurken unitId belirtilmemiş, hangi daireye ait olduğu bilinmiyor');
+        return this.dataSource.transaction(async (manager) => {
+            switch (entry.entryType) {
+                case cashflow_calendar_entity_1.CashflowEntryType.INSTALLMENT_PAYMENT: {
+                    if (!entry.sourceId) {
+                        throw new common_1.BadRequestException('Bu kayıt oluşturulurken unitId belirtilmemiş, hangi daireye ait olduğu bilinmiyor');
+                    }
+                    await this.paymentsService.create(contractorId, entry.sourceId, {
+                        amount: entry.currentAmount,
+                        paymentDate: dto.paidDate,
+                        paymentMethod: dto.paymentMethod,
+                        note: `Takvim kaydından: ${entry.title}`,
+                    }, manager);
+                    break;
                 }
-                await this.paymentsService.create(contractorId, entry.sourceId, {
-                    amount: entry.currentAmount,
-                    paymentDate: dto.paidDate,
-                    paymentMethod: dto.paymentMethod,
-                    note: `Takvim kaydından: ${entry.title}`,
-                });
-                break;
-            }
-            case cashflow_calendar_entity_1.CashflowEntryType.RENT: {
-                if (!entry.sourceId) {
-                    throw new common_1.BadRequestException('Bu kayıt oluşturulurken rentalId belirtilmemiş, hangi kira sözleşmesine ait olduğu bilinmiyor');
+                case cashflow_calendar_entity_1.CashflowEntryType.RENT: {
+                    if (!entry.sourceId) {
+                        throw new common_1.BadRequestException('Bu kayıt oluşturulurken rentalId belirtilmemiş, hangi kira sözleşmesine ait olduğu bilinmiyor');
+                    }
+                    await this.assetsService.addRentalPayment(contractorId, entry.sourceId, {
+                        amount: entry.currentAmount,
+                        paymentDate: dto.paidDate,
+                        note: `Takvim kaydından: ${entry.title}`,
+                    }, manager);
+                    break;
                 }
-                await this.assetsService.addRentalPayment(contractorId, entry.sourceId, {
-                    amount: entry.currentAmount,
-                    paymentDate: dto.paidDate,
-                    note: `Takvim kaydından: ${entry.title}`,
-                });
-                break;
+                case cashflow_calendar_entity_1.CashflowEntryType.CHECK:
+                case cashflow_calendar_entity_1.CashflowEntryType.OTHER: {
+                    const isIncome = entry.direction === 'income';
+                    await manager.save(manager.create(asset_transaction_entity_1.AssetTransaction, {
+                        contractorId,
+                        transactionType: isIncome
+                            ? asset_transaction_entity_1.AssetTransactionType.MANUAL_ADDITION
+                            : asset_transaction_entity_1.AssetTransactionType.MANUAL_DEDUCTION,
+                        amount: isIncome ? entry.currentAmount : -entry.currentAmount,
+                        sourceTable: 'cashflow_calendar',
+                        sourceId: entry.id,
+                        transactionDate: new Date(dto.paidDate),
+                        description: entry.title,
+                    }));
+                    break;
+                }
             }
-            case cashflow_calendar_entity_1.CashflowEntryType.CHECK:
-            case cashflow_calendar_entity_1.CashflowEntryType.OTHER: {
-                const isIncome = entry.direction === 'income';
-                await this.assetTransactionRepo.save(this.assetTransactionRepo.create({
-                    contractorId,
-                    transactionType: isIncome
-                        ? asset_transaction_entity_1.AssetTransactionType.MANUAL_ADDITION
-                        : asset_transaction_entity_1.AssetTransactionType.MANUAL_DEDUCTION,
-                    amount: isIncome ? entry.currentAmount : -entry.currentAmount,
-                    sourceTable: 'cashflow_calendar',
-                    sourceId: entry.id,
-                    transactionDate: new Date(dto.paidDate),
-                    description: entry.title,
-                }));
-                break;
-            }
-        }
-        entry.status = cashflow_calendar_entity_1.CashflowStatus.PAID;
-        entry.paidDate = new Date(dto.paidDate);
-        return this.calendarRepo.save(entry);
+            entry.status = cashflow_calendar_entity_1.CashflowStatus.PAID;
+            entry.paidDate = new Date(dto.paidDate);
+            return manager.save(entry);
+        });
     }
     async handleDailyAccrualCron() {
         this.logger.log('Günlük faiz işletme zamanlayıcısı başladı...');
@@ -156,13 +158,19 @@ let CashflowService = CashflowService_1 = class CashflowService {
             const interest = Number(entry.originalAmount) * Number(entry.dailyInterestRate);
             const balanceBefore = Number(entry.currentAmount);
             const balanceAfter = balanceBefore + interest;
-            const inserted = await this.dataSource.query(`INSERT INTO cashflow_interest_accruals
-           (calendar_entry_id, accrual_date, interest_amount, balance_before, balance_after)
-         VALUES ($1, CURRENT_DATE, $2, $3, $4)
-         ON CONFLICT (calendar_entry_id, accrual_date) DO NOTHING
-         RETURNING id`, [entry.id, interest, balanceBefore, balanceAfter]);
-            if (inserted.length > 0) {
-                await this.calendarRepo.update(entry.id, { currentAmount: balanceAfter });
+            const applied = await this.dataSource.transaction(async (manager) => {
+                const inserted = await manager.query(`INSERT INTO cashflow_interest_accruals
+             (calendar_entry_id, accrual_date, interest_amount, balance_before, balance_after)
+           VALUES ($1, CURRENT_DATE, $2, $3, $4)
+           ON CONFLICT (calendar_entry_id, accrual_date) DO NOTHING
+           RETURNING id`, [entry.id, interest, balanceBefore, balanceAfter]);
+                if (inserted.length === 0) {
+                    return false;
+                }
+                await manager.update(cashflow_calendar_entity_1.CashflowCalendar, entry.id, { currentAmount: balanceAfter });
+                return true;
+            });
+            if (applied) {
                 interestApplied++;
             }
             else {

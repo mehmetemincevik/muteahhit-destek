@@ -39,25 +39,28 @@ let PaymentsService = class PaymentsService {
         }
         return unit;
     }
-    async create(contractorId, unitId, dto) {
+    async create(contractorId, unitId, dto, externalManager) {
         await this.assertUnitOwnership(contractorId, unitId);
-        const payment = this.paymentRepo.create({
-            unitId,
-            amount: dto.amount,
-            paymentDate: new Date(dto.paymentDate),
-            paymentMethod: dto.paymentMethod,
-            note: dto.note,
-        });
-        const saved = await this.paymentRepo.save(payment);
-        await this.assetTransactionRepo.save(this.assetTransactionRepo.create({
-            contractorId,
-            transactionType: asset_transaction_entity_1.AssetTransactionType.UNIT_SALE_PAYMENT,
-            amount: dto.amount,
-            sourceTable: 'payments',
-            sourceId: saved.id,
-            transactionDate: new Date(dto.paymentDate),
-        }));
-        return saved;
+        const run = async (manager) => {
+            const payment = manager.create(payment_entity_1.Payment, {
+                unitId,
+                amount: dto.amount,
+                paymentDate: new Date(dto.paymentDate),
+                paymentMethod: dto.paymentMethod,
+                note: dto.note,
+            });
+            const saved = await manager.save(payment);
+            await manager.save(manager.create(asset_transaction_entity_1.AssetTransaction, {
+                contractorId,
+                transactionType: asset_transaction_entity_1.AssetTransactionType.UNIT_SALE_PAYMENT,
+                amount: dto.amount,
+                sourceTable: 'payments',
+                sourceId: saved.id,
+                transactionDate: new Date(dto.paymentDate),
+            }));
+            return saved;
+        };
+        return externalManager ? run(externalManager) : this.dataSource.transaction(run);
     }
     async findByUnit(contractorId, unitId) {
         await this.assertUnitOwnership(contractorId, unitId);

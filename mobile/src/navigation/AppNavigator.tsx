@@ -22,13 +22,31 @@ import CostItemDetailScreen from '../screens/CostItemDetailScreen';
 import CashflowScreen from '../screens/CashflowScreen';
 import CashflowEntryDetailScreen from '../screens/CashflowEntryDetailScreen';
 import CreateCashflowEntryScreen from '../screens/CreateCashflowEntryScreen';
+import AssetsScreen from '../screens/AssetsScreen';
+import AssetDetailScreen from '../screens/AssetDetailScreen';
+import CreateAssetScreen from '../screens/CreateAssetScreen';
+import CreateRentalScreen from '../screens/CreateRentalScreen';
+import CraftsmanHomeScreen from '../screens/CraftsmanHomeScreen';
+import EditProfileScreen from '../screens/EditProfileScreen';
+import CreatePackageScreen from '../screens/CreatePackageScreen';
+import PackageDetailScreen from '../screens/PackageDetailScreen';
+import PortfolioScreen from '../screens/PortfolioScreen';
+import ConversationsScreen from '../screens/ConversationsScreen';
+import ConversationDetailScreen from '../screens/ConversationDetailScreen';
+import PublicProjectsScreen from '../screens/PublicProjectsScreen';
+import CraftsmenSearchScreen from '../screens/CraftsmenSearchScreen';
+import CraftsmanDetailScreen from '../screens/CraftsmanDetailScreen';
+import SelectLandOwnerScreen from '../screens/SelectLandOwnerScreen';
 import { colors } from '../theme/tokens';
 
 const Stack = createNativeStackNavigator();
 
-// Oturum durumuna göre iki ayrı yığın render edilir. Giriş/kayıt ekranlarında
-// açıkça yönlendirme yapılmaz; AuthContext'teki user dolduğunda bu bileşen
-// yeniden render olur ve uygulama yığınına geçilir.
+// Üç ayrı yığın vardır: oturum kapalı, müteahhit ve usta. Giriş/kayıt ekranlarında
+// açıkça yönlendirme yapılmaz; AuthContext'teki user dolduğunda bu bileşen yeniden
+// render olur ve role karşılık gelen yığına geçilir.
+//
+// Yığınların ayrılması yetkilendirmenin bir parçası değil, yalnızca gezinme kolaylığıdır;
+// asıl kontrol backend'deki RolesGuard tarafından yapılır.
 export default function AppNavigator() {
   const { user, isLoading } = useAuth();
 
@@ -43,8 +61,26 @@ export default function AppNavigator() {
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {user ? (
-          // Oturum açık: uygulama ekranları
+        {!user ? (
+          // Oturum kapalı: yalnızca giriş ve kayıt
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Register" component={RegisterScreen} />
+          </>
+        ) : user.role === 'craftsman' ? (
+          // Usta: profil, hizmet paketleri, atanan projeler
+          <>
+            <Stack.Screen name="CraftsmanHome" component={CraftsmanHomeScreen} />
+            <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+            <Stack.Screen name="CreatePackage" component={CreatePackageScreen} />
+            <Stack.Screen name="PackageDetail" component={PackageDetailScreen} />
+            <Stack.Screen name="Portfolio" component={PortfolioScreen} />
+            <Stack.Screen name="Conversations" component={ConversationsScreen} />
+            <Stack.Screen name="ConversationDetail" component={ConversationDetailScreen} />
+            <Stack.Screen name="PublicProjects" component={PublicProjectsScreen} />
+          </>
+        ) : (
+          // Müteahhit: proje ve finans yönetimi
           <>
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="CreateProject" component={CreateProjectScreen} />
@@ -63,12 +99,15 @@ export default function AppNavigator() {
             <Stack.Screen name="Cashflow" component={CashflowScreen} />
             <Stack.Screen name="CashflowEntryDetail" component={CashflowEntryDetailScreen} />
             <Stack.Screen name="CreateCashflowEntry" component={CreateCashflowEntryScreen} />
-          </>
-        ) : (
-          // Oturum kapalı: yalnızca giriş ve kayıt
-          <>
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="Register" component={RegisterScreen} />
+            <Stack.Screen name="Assets" component={AssetsScreen} />
+            <Stack.Screen name="AssetDetail" component={AssetDetailScreen} />
+            <Stack.Screen name="CreateAsset" component={CreateAssetScreen} />
+            <Stack.Screen name="CreateRental" component={CreateRentalScreen} />
+            <Stack.Screen name="Conversations" component={ConversationsScreen} />
+            <Stack.Screen name="ConversationDetail" component={ConversationDetailScreen} />
+            <Stack.Screen name="CraftsmenSearch" component={CraftsmenSearchScreen} />
+            <Stack.Screen name="CraftsmanDetail" component={CraftsmanDetailScreen} />
+            <Stack.Screen name="SelectLandOwner" component={SelectLandOwnerScreen} />
           </>
         )}
       </Stack.Navigator>

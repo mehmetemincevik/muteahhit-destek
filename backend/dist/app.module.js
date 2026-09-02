@@ -13,6 +13,7 @@ const config_1 = require("@nestjs/config");
 const typeorm_1 = require("@nestjs/typeorm");
 const throttler_1 = require("@nestjs/throttler");
 const schedule_1 = require("@nestjs/schedule");
+const storage_module_1 = require("./modules/storage/storage.module");
 const auth_module_1 = require("./modules/auth/auth.module");
 const projects_module_1 = require("./modules/projects/projects.module");
 const units_module_1 = require("./modules/units/units.module");
@@ -23,6 +24,7 @@ const cashflow_module_1 = require("./modules/cashflow/cashflow.module");
 const craftsmen_module_1 = require("./modules/craftsmen/craftsmen.module");
 const messaging_module_1 = require("./modules/messaging/messaging.module");
 const templates_module_1 = require("./modules/templates/templates.module");
+const notifications_module_1 = require("./modules/notifications/notifications.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -46,6 +48,7 @@ exports.AppModule = AppModule = __decorate([
                     synchronize: false,
                 }),
             }),
+            storage_module_1.StorageModule,
             auth_module_1.AuthModule,
             projects_module_1.ProjectsModule,
             units_module_1.UnitsModule,
@@ -56,6 +59,7 @@ exports.AppModule = AppModule = __decorate([
             craftsmen_module_1.CraftsmenModule,
             messaging_module_1.MessagingModule,
             templates_module_1.TemplatesModule,
+            notifications_module_1.NotificationsModule,
         ],
         providers: [
             { provide: core_1.APP_GUARD, useClass: throttler_1.ThrottlerGuard },

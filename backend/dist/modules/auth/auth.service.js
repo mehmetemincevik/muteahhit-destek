@@ -75,7 +75,10 @@ let AuthService = class AuthService {
         return this.buildAuthResponse(user);
     }
     async login(dto) {
-        const user = await this.userRepo.findOne({ where: { phone: dto.phone } });
+        const user = await this.userRepo.findOne({
+            where: { phone: dto.phone },
+            select: ['id', 'role', 'fullName', 'phone', 'email', 'passwordHash'],
+        });
         if (!user) {
             throw new common_1.UnauthorizedException('Telefon numarası veya şifre hatalı');
         }

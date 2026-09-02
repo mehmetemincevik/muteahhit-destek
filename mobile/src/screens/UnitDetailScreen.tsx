@@ -18,6 +18,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 
 export default function UnitDetailScreen({ route, navigation }: any) {
   const initialUnit: Unit = route.params.unit;
+  const projectId: string | undefined = route.params.projectId;
   const { user } = useAuth();
   const [unit, setUnit] = useState<Unit>(initialUnit);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -83,13 +84,20 @@ export default function UnitDetailScreen({ route, navigation }: any) {
             />
           )}
 
+          {unit.ownershipStatus !== 'given_to_land_owner' && projectId && (
+            <Button
+              label="Arsa Sahibine Devret"
+              variant="ghost"
+              onPress={() =>
+                navigation.navigate('SelectLandOwner', { projectId, unitId: unit.id })
+              }
+              style={{ marginBottom: spacing.sm }}
+            />
+          )}
+
           {unit.ownershipStatus !== 'available' && (
             <Button label="Boşta Olarak İşaretle" variant="ghost" onPress={markAvailable} isLoading={isUpdating} />
           )}
-
-          {/* TODO: "Arsa Sahibine Verildi" durumu için seçim akışı eksik. Arsa sahipleri
-              proje oluşturulurken kaydediliyor (land_owners), ancak listeleyip seçtiren
-              bir ekran yok. Backend bu durumda landOwnerId zorunlu tutuyor. */}
         </View>
       )}
     </View>

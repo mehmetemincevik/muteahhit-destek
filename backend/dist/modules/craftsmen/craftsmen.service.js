@@ -23,8 +23,9 @@ const craftsman_portfolio_image_entity_1 = require("./entities/craftsman-portfol
 const craftsman_review_entity_1 = require("./entities/craftsman-review.entity");
 const project_craftsman_assignment_entity_1 = require("./entities/project-craftsman-assignment.entity");
 const projects_service_1 = require("../projects/projects.service");
+const storage_service_1 = require("../storage/storage.service");
 let CraftsmenService = class CraftsmenService {
-    constructor(profileRepo, packageRepo, packageItemRepo, portfolioRepo, reviewRepo, assignmentRepo, dataSource, projectsService) {
+    constructor(profileRepo, packageRepo, packageItemRepo, portfolioRepo, reviewRepo, assignmentRepo, dataSource, projectsService, storageService) {
         this.profileRepo = profileRepo;
         this.packageRepo = packageRepo;
         this.packageItemRepo = packageItemRepo;
@@ -33,6 +34,7 @@ let CraftsmenService = class CraftsmenService {
         this.assignmentRepo = assignmentRepo;
         this.dataSource = dataSource;
         this.projectsService = projectsService;
+        this.storageService = storageService;
     }
     async upsertProfile(userId, dto) {
         let profile = await this.profileRepo.findOne({ where: { userId } });
@@ -108,6 +110,38 @@ let CraftsmenService = class CraftsmenService {
         const craftsmanId = await this.getOwnCraftsmanId(userId);
         const image = this.portfolioRepo.create({ craftsmanId, ...dto });
         return this.portfolioRepo.save(image);
+    }
+    async uploadPortfolioImage(userId, file, dto) {
+        const craftsmanId = await this.getOwnCraftsmanId(userId);
+        if (dto.packageId) {
+            await this.assertPackageOwnership(userId, dto.packageId);
+        }
+        const imageUrl = await this.storageService.save(file, 'portfolio');
+        try {
+            const image = this.portfolioRepo.create({
+                craftsmanId,
+                imageUrl,
+                packageId: dto.packageId || undefined,
+                caption: dto.caption || undefined,
+            });
+            return await this.portfolioRepo.save(image);
+        }
+        catch (error) {
+            await this.storageService.delete(imageUrl);
+            throw error;
+        }
+    }
+    async deletePortfolioImage(userId, imageId) {
+        const craftsmanId = await this.getOwnCraftsmanId(userId);
+        const image = await this.portfolioRepo.findOne({ where: { id: imageId } });
+        if (!image) {
+            throw new common_1.NotFoundException('Görsel bulunamadı');
+        }
+        if (image.craftsmanId !== craftsmanId) {
+            throw new common_1.ForbiddenException('Bu görsele erişim yetkiniz yok');
+        }
+        await this.portfolioRepo.remove(image);
+        await this.storageService.delete(image.imageUrl);
     }
     async createReview(contractorId, dto) {
         if (dto.projectId) {
@@ -193,6 +227,7 @@ exports.CraftsmenService = CraftsmenService = __decorate([
         typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.DataSource,
-        projects_service_1.ProjectsService])
+        projects_service_1.ProjectsService,
+        storage_service_1.StorageService])
 ], CraftsmenService);
 //# sourceMappingURL=craftsmen.service.js.map

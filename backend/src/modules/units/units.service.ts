@@ -98,6 +98,11 @@ export class UnitsService {
       }
     }
 
+    // Arsa sahibi için de aynı doğrulama gerekir; kayıt başka bir projeye ait olabilir.
+    if (dto.landOwnerId) {
+      await this.projectsService.assertLandOwnerBelongsToContractor(contractorId, dto.landOwnerId);
+    }
+
     unit.ownershipStatus = dto.status;
     unit.buyerId = dto.status === UnitOwnershipStatus.SOLD ? dto.buyerId : undefined;
     unit.landOwnerId =

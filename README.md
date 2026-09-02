@@ -126,6 +126,12 @@ view'lardan okunur. Böylece bir ödeme silindiğinde veya düzeltildiğinde tut
 kendiliğinden doğru kalır. İstisna, performans nedeniyle önbelleklenen iki alan vardır
 (varlık güncel değeri, usta ortalama puanı); bunlar ilgili işlemden sonra yeniden hesaplanır.
 
+**Birden fazla tabloya yazan işlemler transaction içinde yürütülür.** Bir tahsilat
+kaydedildiğinde hem ilgili ödeme tablosuna hem de merkezi deftere yazılır; ikisi tek
+işlem olarak ele alınır ve biri başarısız olursa diğeri de geri alınır. Aksi halde
+tahsilat görünürken defterde yer almayan tutarlar oluşur. Ayrıntı için
+`backend/README.md`.
+
 **Şema değişiklikleri yalnızca migration ile yapılır.** TypeORM'un `synchronize` özelliği
 kapalıdır; elle yazılmış CHECK constraint'leri ve view'ları bozmaması için. SQL kaynağı
 `schema/` klasöründe, uygulanan sürüm `backend/src/database/migrations/` altındadır.
@@ -144,14 +150,13 @@ ile "bu ay ne oldu" sorularının cevabı karışır.
   varlıklar, nakit akışı, ustalar, mesajlaşma ve teklifler, hizmet paketi şablonları
 - Rol bazlı yetkilendirme, hız sınırlama, sistem uçları için API anahtarı
 - Foreign key indeksleri
-- Mobil: kimlik doğrulama, projeler, daireler, alıcılar, tahsilat, maliyetler, nakit akışı
+- Mobil: tüm backend modüllerinin karşılığı (kimlik doğrulama, projeler, daireler,
+  alıcılar, tahsilat, maliyetler, nakit akışı, varlıklar, usta profili, teklif süreci,
+  arsa sahibi devri)
 
 ### Sıradaki
 
-- Mobil: varlıklar, usta profili ve hizmet paketleri, teklif/mesajlaşma ekranları
-- Mobil: arsa sahibi seçimi (dairenin "arsa sahibine verildi" durumu için gerekli)
-- Ödeme ve defter kayıtlarının tek transaction'a alınması
-- Tarih seçici bileşen (şu an tarihler metin olarak giriliyor)
+- Push bildirim (uygulama kapalıyken; development build gerektiriyor)
 
 ### Sonraki fazlar
 
@@ -175,6 +180,5 @@ Her iki tarafın da kendi README'sinde ayrıntılı listesi var. Öne çıkanlar
 - Token yenileme mekanizması yok; süresi dolan oturumda yeniden giriş gerekir.
 - Hız sınırlama sayacı ve zamanlanmış iş tek instance varsayar. Yatay ölçekleme için
   ortak store ve dağıtık kilit gerekir.
-- Bazı yazma işlemleri (ödeme + defter kaydı) ayrı transaction'larda.
 - Maliyet kategorileri hesaplar arasında ortak.
 - API dokümantasyonu (Swagger) eklenmedi.

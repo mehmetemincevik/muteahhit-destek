@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import { Payment } from './entities/payment.entity';
 import { Unit } from '../units/entities/unit.entity';
 import { AssetTransaction, AssetTransactionType } from '../assets/entities/asset-transaction.entity';
@@ -39,35 +39,45 @@ export class PaymentsService {
     return unit;
   }
 
-  async create(contractorId: string, unitId: string, dto: CreatePaymentDto): Promise<Payment> {
+  // externalManager verildiğinde çağıranın transaction'ı içinde çalışır; verilmediğinde
+  // kendi transaction'ını açar. Bu ayrım, CashflowService.markAsPaid gibi bu metodu daha
+  // geniş bir işlemin parçası olarak çağıran yerlerde iç içe transaction açılmasını önler.
+  async create(
+    contractorId: string,
+    unitId: string,
+    dto: CreatePaymentDto,
+    externalManager?: EntityManager,
+  ): Promise<Payment> {
     await this.assertUnitOwnership(contractorId, unitId);
 
-    const payment = this.paymentRepo.create({
-      unitId,
-      amount: dto.amount,
-      paymentDate: new Date(dto.paymentDate),
-      paymentMethod: dto.paymentMethod,
-      note: dto.note,
-    });
-    const saved = await this.paymentRepo.save(payment);
-
-    // Ödeme, genel deftere (asset_transactions) gelir olarak yazılır. assetId boş
-    // bırakılır: kayıt belirli bir nakit hesabına değil, genel deftere düşer.
-    //
-    // Sınırlama: ödeme kaydı ile defter kaydı ayrı işlemlerde yazılıyor. İkincisi
-    // başarısız olursa defter eksik kalır; iki yazma tek transaction'a alınmalı.
-    await this.assetTransactionRepo.save(
-      this.assetTransactionRepo.create({
-        contractorId,
-        transactionType: AssetTransactionType.UNIT_SALE_PAYMENT,
+    const run = async (manager: EntityManager): Promise<Payment> => {
+      const payment = manager.create(Payment, {
+        unitId,
         amount: dto.amount,
-        sourceTable: 'payments',
-        sourceId: saved.id,
-        transactionDate: new Date(dto.paymentDate),
-      }),
-    );
+        paymentDate: new Date(dto.paymentDate),
+        paymentMethod: dto.paymentMethod,
+        note: dto.note,
+      });
+      const saved = await manager.save(payment);
 
-    return saved;
+      // Ödeme ve defter kaydı aynı transaction içinde yazılır; biri başarısız olursa
+      // ikisi de geri alınır. assetId boş bırakılır: kayıt belirli bir nakit hesabına
+      // değil, genel deftere düşer.
+      await manager.save(
+        manager.create(AssetTransaction, {
+          contractorId,
+          transactionType: AssetTransactionType.UNIT_SALE_PAYMENT,
+          amount: dto.amount,
+          sourceTable: 'payments',
+          sourceId: saved.id,
+          transactionDate: new Date(dto.paymentDate),
+        }),
+      );
+
+      return saved;
+    };
+
+    return externalManager ? run(externalManager) : this.dataSource.transaction(run);
   }
 
   async findByUnit(contractorId: string, unitId: string): Promise<Payment[]> {

@@ -13,6 +13,7 @@ import { createCostPaymentRequest, fetchCostItemBalance } from '../api/costs';
 import { CostItem, CostItemPaymentSummary, CostPaymentMethod } from '../types/cost';
 import { Button } from '../components/Button';
 import { TextField } from '../components/TextField';
+import { DateField } from '../components/DateField';
 import { colors, spacing, typeScale, fonts, radius } from '../theme/tokens';
 import { formatCurrency, parseAmount } from '../utils/format';
 
@@ -63,8 +64,8 @@ export default function CostItemDetailScreen({ route }: any) {
       Alert.alert('Geçersiz tutar', 'Sıfırdan büyük bir tutar gir');
       return;
     }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(paymentDate)) {
-      Alert.alert('Geçersiz tarih', 'Tarihi YYYY-AA-GG şeklinde gir');
+    if (!paymentDate) {
+      Alert.alert('Eksik bilgi', 'Ödeme tarihi seçin');
       return;
     }
 
@@ -139,12 +140,7 @@ export default function CostItemDetailScreen({ route }: any) {
             keyboardType="decimal-pad"
             placeholder="örn. 100000"
           />
-          <TextField
-            label="Ödeme Tarihi *"
-            value={paymentDate}
-            onChangeText={setPaymentDate}
-            placeholder="YYYY-AA-GG"
-          />
+          <DateField label="Ödeme Tarihi *" value={paymentDate} onChange={setPaymentDate} />
 
           <Text style={[typeScale.label, { marginBottom: spacing.sm }]}>YÖNTEM</Text>
           <View style={styles.methodRow}>

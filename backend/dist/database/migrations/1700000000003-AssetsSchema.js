@@ -122,7 +122,7 @@ CREATE TABLE asset_transactions (
     `);
     }
     async down(queryRunner) {
-        throw new Error('Bu migration için down() henüz yazılmadı -- elle geri almanız gerekir.');
+        throw new Error('down() tanımlı değil; geri alma elle yapılmalıdır.');
     }
 }
 exports.AssetsSchema1700000000003 = AssetsSchema1700000000003;

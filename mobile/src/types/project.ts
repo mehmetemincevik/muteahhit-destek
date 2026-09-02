@@ -21,3 +21,29 @@ export interface CreateProjectPayload {
   purchasePrice?: number;
   isKatKarsiligi?: boolean;
 }
+
+export interface LandOwner {
+  id: string;
+  landId: string;
+  fullName: string;
+  phone?: string;
+  sharePercentage?: string;
+  tcOrVkn?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface CreateLandOwnerPayload {
+  fullName: string;
+  phone?: string;
+  sharePercentage?: number;
+  tcOrVkn?: string;
+}
+
+export interface UpdateProjectPayload {
+  name?: string;
+  status?: ProjectStatus;
+  estimatedOccupancyDate?: string;
+  isPublic?: boolean;
+  publicNote?: string;
+}

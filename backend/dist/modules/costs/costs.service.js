@@ -82,25 +82,28 @@ let CostsService = class CostsService {
         }
         return costItem;
     }
-    async createCostPayment(contractorId, costItemId, dto) {
+    async createCostPayment(contractorId, costItemId, dto, externalManager) {
         await this.assertCostItemOwnership(contractorId, costItemId);
-        const payment = this.costPaymentRepo.create({
-            costItemId,
-            amount: dto.amount,
-            paymentDate: new Date(dto.paymentDate),
-            paymentMethod: dto.paymentMethod,
-            note: dto.note,
-        });
-        const saved = await this.costPaymentRepo.save(payment);
-        await this.assetTransactionRepo.save(this.assetTransactionRepo.create({
-            contractorId,
-            transactionType: asset_transaction_entity_1.AssetTransactionType.COST_PAYMENT,
-            amount: -dto.amount,
-            sourceTable: 'cost_payments',
-            sourceId: saved.id,
-            transactionDate: new Date(dto.paymentDate),
-        }));
-        return saved;
+        const run = async (manager) => {
+            const payment = manager.create(cost_payment_entity_1.CostPayment, {
+                costItemId,
+                amount: dto.amount,
+                paymentDate: new Date(dto.paymentDate),
+                paymentMethod: dto.paymentMethod,
+                note: dto.note,
+            });
+            const saved = await manager.save(payment);
+            await manager.save(manager.create(asset_transaction_entity_1.AssetTransaction, {
+                contractorId,
+                transactionType: asset_transaction_entity_1.AssetTransactionType.COST_PAYMENT,
+                amount: -dto.amount,
+                sourceTable: 'cost_payments',
+                sourceId: saved.id,
+                transactionDate: new Date(dto.paymentDate),
+            }));
+            return saved;
+        };
+        return externalManager ? run(externalManager) : this.dataSource.transaction(run);
     }
     async getCostItemBalance(contractorId, costItemId) {
         await this.assertCostItemOwnership(contractorId, costItemId);

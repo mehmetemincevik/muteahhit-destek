@@ -38,7 +38,7 @@ __decorate([
     __metadata("design:type", String)
 ], Offer.prototype, "messageId", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => message_entity_1.Message),
+    (0, typeorm_1.OneToOne)(() => message_entity_1.Message, (message) => message.offer),
     (0, typeorm_1.JoinColumn)({ name: 'message_id' }),
     __metadata("design:type", message_entity_1.Message)
 ], Offer.prototype, "message", void 0);

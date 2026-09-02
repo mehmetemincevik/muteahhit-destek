@@ -14,6 +14,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CraftsmenController = void 0;
 const common_1 = require("@nestjs/common");
+const platform_express_1 = require("@nestjs/platform-express");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../../common/guards/roles.guard");
 const roles_decorator_1 = require("../../common/decorators/roles.decorator");
@@ -23,6 +24,7 @@ const upsert_profile_dto_1 = require("./dto/upsert-profile.dto");
 const create_package_dto_1 = require("./dto/create-package.dto");
 const create_package_item_dto_1 = require("./dto/create-package-item.dto");
 const add_portfolio_image_dto_1 = require("./dto/add-portfolio-image.dto");
+const upload_portfolio_image_dto_1 = require("./dto/upload-portfolio-image.dto");
 const create_review_dto_1 = require("./dto/create-review.dto");
 const create_assignment_dto_1 = require("./dto/create-assignment.dto");
 const update_assignment_status_dto_1 = require("./dto/update-assignment-status.dto");
@@ -53,6 +55,12 @@ let CraftsmenController = class CraftsmenController {
     }
     addPortfolioImage(user, dto) {
         return this.craftsmenService.addPortfolioImage(user.userId, dto);
+    }
+    uploadPortfolioImage(user, file, dto) {
+        return this.craftsmenService.uploadPortfolioImage(user.userId, file, dto);
+    }
+    deletePortfolioImage(imageId, user) {
+        return this.craftsmenService.deletePortfolioImage(user.userId, imageId);
     }
     createReview(user, dto) {
         return this.craftsmenService.createReview(user.userId, dto);
@@ -138,6 +146,26 @@ __decorate([
     __metadata("design:paramtypes", [Object, add_portfolio_image_dto_1.AddPortfolioImageDto]),
     __metadata("design:returntype", void 0)
 ], CraftsmenController.prototype, "addPortfolioImage", null);
+__decorate([
+    (0, common_1.Post)('craftsmen/portfolio/upload'),
+    (0, roles_decorator_1.Roles)('craftsman'),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('file', { limits: { fileSize: 8 * 1024 * 1024 } })),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.UploadedFile)()),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object, upload_portfolio_image_dto_1.UploadPortfolioImageDto]),
+    __metadata("design:returntype", void 0)
+], CraftsmenController.prototype, "uploadPortfolioImage", null);
+__decorate([
+    (0, common_1.Delete)('craftsmen/portfolio/:imageId'),
+    (0, roles_decorator_1.Roles)('craftsman'),
+    __param(0, (0, common_1.Param)('imageId')),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], CraftsmenController.prototype, "deletePortfolioImage", null);
 __decorate([
     (0, common_1.Post)('craftsmen/reviews'),
     (0, roles_decorator_1.Roles)('contractor'),

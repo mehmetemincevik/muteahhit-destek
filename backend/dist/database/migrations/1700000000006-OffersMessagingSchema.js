@@ -64,7 +64,7 @@ CREATE TABLE offers (
 
 -- ============================================
 -- İŞ AKIŞI MANTIĞI:
--- 1) Usta veya müteahhit bir 'offer' tipinde mesaj gönderir -> messages + offers satırı birlikte oluşur
+-- 1) Teklif gönderildiğinde messages ve offers kayıtları birlikte oluşur
 -- 2) Karşı taraf: kabul ederse status='accepted' olur VE otomatik olarak
 --    project_craftsman_assignments tablosunda yeni bir kayıt açılır (agreed_price = offers.amount)
 -- 3) Reddederse status='rejected'
@@ -75,7 +75,7 @@ CREATE TABLE offers (
     `);
     }
     async down(queryRunner) {
-        throw new Error('Bu migration için down() henüz yazılmadı -- elle geri almanız gerekir.');
+        throw new Error('down() tanımlı değil; geri alma elle yapılmalıdır.');
     }
 }
 exports.OffersMessagingSchema1700000000006 = OffersMessagingSchema1700000000006;

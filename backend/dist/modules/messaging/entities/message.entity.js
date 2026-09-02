@@ -13,6 +13,7 @@ exports.Message = exports.MessageType = void 0;
 const typeorm_1 = require("typeorm");
 const conversation_entity_1 = require("./conversation.entity");
 const user_entity_1 = require("../../users/entities/user.entity");
+const offer_entity_1 = require("./offer.entity");
 var MessageType;
 (function (MessageType) {
     MessageType["TEXT"] = "text";
@@ -55,6 +56,10 @@ __decorate([
     (0, typeorm_1.Column)({ name: 'read_at', type: 'timestamptz', nullable: true }),
     __metadata("design:type", Date)
 ], Message.prototype, "readAt", void 0);
+__decorate([
+    (0, typeorm_1.OneToOne)(() => offer_entity_1.Offer, (offer) => offer.message),
+    __metadata("design:type", offer_entity_1.Offer)
+], Message.prototype, "offer", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)({ name: 'created_at' }),
     __metadata("design:type", Date)

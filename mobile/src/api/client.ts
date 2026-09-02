@@ -7,7 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 //
 // TODO: Bu değer ortam değişkenine (app.config.ts + EXPO_PUBLIC_API_URL) taşınmalı.
 // Şu haliyle her ortam değişiminde dosyanın elle düzenlenmesi gerekiyor.
-const API_BASE_URL = 'http://BURAYA_PC_IP_ADRESIN:3000';
+const API_BASE_URL = 'http://10.202.83.182:3000';
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,

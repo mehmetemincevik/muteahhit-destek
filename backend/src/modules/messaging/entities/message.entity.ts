@@ -3,11 +3,13 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
+  OneToOne,
   JoinColumn,
   CreateDateColumn,
 } from 'typeorm';
 import { Conversation } from './conversation.entity';
 import { User } from '../../users/entities/user.entity';
+import { Offer } from './offer.entity';
 
 export enum MessageType {
   TEXT = 'text',
@@ -41,6 +43,11 @@ export class Message {
 
   @Column({ name: 'read_at', type: 'timestamptz', nullable: true })
   readAt?: Date;
+
+  // messageType 'offer' olduğunda teklif detayı buradan okunur; metin mesajlarında boştur.
+  // Sohbet akışında teklif tutarı ve durumu gösterilebilsin diye ters ilişki tanımlı.
+  @OneToOne(() => Offer, (offer) => offer.message)
+  offer?: Offer;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

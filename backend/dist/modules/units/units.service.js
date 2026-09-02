@@ -81,6 +81,9 @@ let UnitsService = class UnitsService {
                 throw new common_1.ForbiddenException('Bu alıcı kaydına erişim yetkiniz yok');
             }
         }
+        if (dto.landOwnerId) {
+            await this.projectsService.assertLandOwnerBelongsToContractor(contractorId, dto.landOwnerId);
+        }
         unit.ownershipStatus = dto.status;
         unit.buyerId = dto.status === unit_entity_1.UnitOwnershipStatus.SOLD ? dto.buyerId : undefined;
         unit.landOwnerId =

@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import { Asset, AssetType } from './entities/asset.entity';
 import { AssetRental } from './entities/asset-rental.entity';
 import { RentalPayment } from './entities/rental-payment.entity';
@@ -39,15 +39,24 @@ export class AssetsService {
   // Nakit ve emtia bakiyesi, varlığa ait tüm hareketlerin toplamıdır. Her hareket
   // sonrası baştan hesaplanır; artımlı güncelleme yapılmaz, böylece kayıt silme veya
   // düzeltme durumunda değer sapmaz.
-  private async recomputeCashCommodityValue(assetId: string): Promise<void> {
-    const rows: { total: string }[] = await this.dataSource.query(
+  private async recomputeCashCommodityValue(
+    assetId: string,
+    manager?: EntityManager,
+  ): Promise<void> {
+    // Hareket eklemesiyle aynı transaction içinde çalışması gerekir; aksi halde
+    // hareket yazılıp bakiye güncellenmeden hata oluşabilir.
+    const runner = manager ?? this.dataSource;
+    const rows: { total: string }[] = await runner.query(
       'SELECT COALESCE(SUM(amount), 0) AS total FROM asset_transactions WHERE asset_id = $1',
       [assetId],
     );
-    await this.assetRepo.update(assetId, {
-      currentValue: parseFloat(rows[0].total),
-      valueUpdatedAt: new Date(),
-    });
+    const patch = { currentValue: parseFloat(rows[0].total), valueUpdatedAt: new Date() };
+
+    if (manager) {
+      await manager.update(Asset, assetId, patch);
+    } else {
+      await this.assetRepo.update(assetId, patch);
+    }
   }
 
   async createAsset(contractorId: string, dto: CreateAssetDto): Promise<Asset> {
@@ -94,21 +103,24 @@ export class AssetsService {
     // DTO her zaman pozitif tutar taşır; işaret yön alanından türetilir.
     const signedAmount = dto.direction === 'manual_addition' ? dto.amount : -dto.amount;
 
-    const transaction = this.transactionRepo.create({
-      contractorId,
-      assetId,
-      transactionType:
-        dto.direction === 'manual_addition'
-          ? AssetTransactionType.MANUAL_ADDITION
-          : AssetTransactionType.MANUAL_DEDUCTION,
-      amount: signedAmount,
-      transactionDate: new Date(dto.transactionDate),
-      description: dto.description,
-    });
-    const saved = await this.transactionRepo.save(transaction);
+    // Hareket ve bakiye güncellemesi tek transaction içinde yapılır.
+    return this.dataSource.transaction(async (manager) => {
+      const transaction = manager.create(AssetTransaction, {
+        contractorId,
+        assetId,
+        transactionType:
+          dto.direction === 'manual_addition'
+            ? AssetTransactionType.MANUAL_ADDITION
+            : AssetTransactionType.MANUAL_DEDUCTION,
+        amount: signedAmount,
+        transactionDate: new Date(dto.transactionDate),
+        description: dto.description,
+      });
+      const saved = await manager.save(transaction);
 
-    await this.recomputeCashCommodityValue(assetId);
-    return saved;
+      await this.recomputeCashCommodityValue(assetId, manager);
+      return saved;
+    });
   }
 
   // --- Kira ---
@@ -157,33 +169,38 @@ export class AssetsService {
     contractorId: string,
     rentalId: string,
     dto: CreateRentalPaymentDto,
+    externalManager?: EntityManager,
   ): Promise<RentalPayment> {
     const rental = await this.assertRentalOwnership(contractorId, rentalId);
 
-    const payment = this.rentalPaymentRepo.create({
-      rentalId,
-      amount: dto.amount,
-      paymentDate: new Date(dto.paymentDate),
-      note: dto.note,
-    });
-    const saved = await this.rentalPaymentRepo.save(payment);
-
-    // Kira geliri deftere yazılır ancak mülkün currentValue'sunu değiştirmez.
-    // Mülk değeri yalnızca değerleme kayıtlarından gelir; kira birikimi değere eklenirse
-    // varlık değeri yanlış şişer.
-    await this.transactionRepo.save(
-      this.transactionRepo.create({
-        contractorId,
-        assetId: rental.assetId,
-        transactionType: AssetTransactionType.RENTAL_INCOME,
+    const run = async (manager: EntityManager): Promise<RentalPayment> => {
+      const payment = manager.create(RentalPayment, {
+        rentalId,
         amount: dto.amount,
-        sourceTable: 'rental_payments',
-        sourceId: saved.id,
-        transactionDate: new Date(dto.paymentDate),
-      }),
-    );
+        paymentDate: new Date(dto.paymentDate),
+        note: dto.note,
+      });
+      const saved = await manager.save(payment);
 
-    return saved;
+      // Kira geliri deftere yazılır ancak mülkün currentValue'sunu değiştirmez.
+      // Mülk değeri yalnızca değerleme kayıtlarından gelir; kira birikimi değere eklenirse
+      // varlık değeri yanlış şişer.
+      await manager.save(
+        manager.create(AssetTransaction, {
+          contractorId,
+          assetId: rental.assetId,
+          transactionType: AssetTransactionType.RENTAL_INCOME,
+          amount: dto.amount,
+          sourceTable: 'rental_payments',
+          sourceId: saved.id,
+          transactionDate: new Date(dto.paymentDate),
+        }),
+      );
+
+      return saved;
+    };
+
+    return externalManager ? run(externalManager) : this.dataSource.transaction(run);
   }
 
   // Mülk değerleme kayıtları.
@@ -199,20 +216,23 @@ export class AssetsService {
       throw new BadRequestException('Değer anlık görüntüsü sadece real_estate tipi varlıklar içindir');
     }
 
-    const snapshot = this.snapshotRepo.create({
-      assetId,
-      estimatedValue: dto.estimatedValue,
-      snapshotDate: new Date(dto.snapshotDate),
-      source: dto.source,
-    });
-    const saved = await this.snapshotRepo.save(snapshot);
+    // Değerleme kaydı ve varlık değerinin güncellenmesi tek transaction içinde yapılır.
+    return this.dataSource.transaction(async (manager) => {
+      const snapshot = manager.create(AssetValueSnapshot, {
+        assetId,
+        estimatedValue: dto.estimatedValue,
+        snapshotDate: new Date(dto.snapshotDate),
+        source: dto.source,
+      });
+      const saved = await manager.save(snapshot);
 
-    // Mülkte currentValue en son değerleme kaydından gelir; hareket toplamı kullanılmaz.
-    await this.assetRepo.update(assetId, {
-      currentValue: dto.estimatedValue,
-      valueUpdatedAt: new Date(),
-    });
+      // Mülkte currentValue en son değerleme kaydından gelir; hareket toplamı kullanılmaz.
+      await manager.update(Asset, assetId, {
+        currentValue: dto.estimatedValue,
+        valueUpdatedAt: new Date(),
+      });
 
-    return saved;
+      return saved;
+    });
   }
 }

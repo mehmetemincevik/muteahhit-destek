@@ -37,7 +37,11 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    const user = await this.userRepo.findOne({ where: { phone: dto.phone } });
+    // passwordHash entity'de select: false olduğu için burada açıkça istenir.
+    const user = await this.userRepo.findOne({
+      where: { phone: dto.phone },
+      select: ['id', 'role', 'fullName', 'phone', 'email', 'passwordHash'],
+    });
     if (!user) {
       throw new UnauthorizedException('Telefon numarası veya şifre hatalı');
     }

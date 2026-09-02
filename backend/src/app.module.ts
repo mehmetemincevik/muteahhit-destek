@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
+import { StorageModule } from './modules/storage/storage.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ProjectsModule } from './modules/projects/projects.module';
 import { UnitsModule } from './modules/units/units.module';
@@ -14,6 +15,7 @@ import { CashflowModule } from './modules/cashflow/cashflow.module';
 import { CraftsmenModule } from './modules/craftsmen/craftsmen.module';
 import { MessagingModule } from './modules/messaging/messaging.module';
 import { TemplatesModule } from './modules/templates/templates.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -49,6 +51,7 @@ import { TemplatesModule } from './modules/templates/templates.module';
       }),
     }),
 
+    StorageModule,
     AuthModule,
     ProjectsModule,
     UnitsModule,
@@ -59,6 +62,7 @@ import { TemplatesModule } from './modules/templates/templates.module';
     CraftsmenModule,
     MessagingModule,
     TemplatesModule,
+    NotificationsModule,
 
   ],
   providers: [

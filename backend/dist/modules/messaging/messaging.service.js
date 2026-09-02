@@ -82,9 +82,11 @@ let MessagingService = class MessagingService {
         return this.conversationRepo.save(conversation);
     }
     async findConversationsForUser(user) {
+        const relations = ['project', 'craftsman', 'craftsman.user', 'contractor'];
         if (user.role === 'contractor') {
             return this.conversationRepo.find({
                 where: { contractorId: user.userId },
+                relations,
                 order: { lastMessageAt: 'DESC' },
             });
         }
@@ -94,6 +96,7 @@ let MessagingService = class MessagingService {
         }
         return this.conversationRepo.find({
             where: { craftsmanId: ownProfile.id },
+            relations,
             order: { lastMessageAt: 'DESC' },
         });
     }
@@ -109,6 +112,7 @@ let MessagingService = class MessagingService {
             .execute();
         return this.messageRepo.find({
             where: { conversationId },
+            relations: ['offer'],
             order: { createdAt: 'ASC' },
         });
     }

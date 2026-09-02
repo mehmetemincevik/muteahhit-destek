@@ -18,6 +18,8 @@ import { CreateReviewDto } from './dto/create-review.dto';
 import { CreateAssignmentDto } from './dto/create-assignment.dto';
 import { UpdateAssignmentStatusDto } from './dto/update-assignment-status.dto';
 import { ProjectsService } from '../projects/projects.service';
+import { StorageService } from '../storage/storage.service';
+import { UploadPortfolioImageDto } from './dto/upload-portfolio-image.dto';
 
 @Injectable()
 export class CraftsmenService {
@@ -34,6 +36,7 @@ export class CraftsmenService {
     private readonly assignmentRepo: Repository<ProjectCraftsmanAssignment>,
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly projectsService: ProjectsService,
+    private readonly storageService: StorageService,
   ) {}
 
   // Profil kaydı yoksa oluşturulur, varsa güncellenir. Gönderilmeyen alanlar
@@ -139,6 +142,52 @@ export class CraftsmenService {
     const craftsmanId = await this.getOwnCraftsmanId(userId);
     const image = this.portfolioRepo.create({ craftsmanId, ...dto });
     return this.portfolioRepo.save(image);
+  }
+
+  // Dosya diske yazılır, ardından erişim adresi kayda işlenir. Kayıt oluşturulamazsa
+  // yazılan dosya temizlenir; aksi halde hiçbir kayda bağlı olmayan dosyalar birikir.
+  async uploadPortfolioImage(
+    userId: string,
+    file: Express.Multer.File,
+    dto: UploadPortfolioImageDto,
+  ): Promise<CraftsmanPortfolioImage> {
+    const craftsmanId = await this.getOwnCraftsmanId(userId);
+
+    if (dto.packageId) {
+      await this.assertPackageOwnership(userId, dto.packageId);
+    }
+
+    const imageUrl = await this.storageService.save(file, 'portfolio');
+
+    try {
+      const image = this.portfolioRepo.create({
+        craftsmanId,
+        imageUrl,
+        packageId: dto.packageId || undefined,
+        caption: dto.caption || undefined,
+      });
+      return await this.portfolioRepo.save(image);
+    } catch (error) {
+      await this.storageService.delete(imageUrl);
+      throw error;
+    }
+  }
+
+  async deletePortfolioImage(userId: string, imageId: string): Promise<void> {
+    const craftsmanId = await this.getOwnCraftsmanId(userId);
+
+    const image = await this.portfolioRepo.findOne({ where: { id: imageId } });
+    if (!image) {
+      throw new NotFoundException('Görsel bulunamadı');
+    }
+    if (image.craftsmanId !== craftsmanId) {
+      throw new ForbiddenException('Bu görsele erişim yetkiniz yok');
+    }
+
+    await this.portfolioRepo.remove(image);
+    // Kayıt silindikten sonra dosya temizlenir; dosya silme başarısız olsa bile
+    // kayıt silinmiş sayılır (bkz. StorageService.delete).
+    await this.storageService.delete(image.imageUrl);
   }
 
   // Değerlendirmeler.

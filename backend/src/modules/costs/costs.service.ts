@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import { CostCategory } from './entities/cost-category.entity';
 import { CostItem } from './entities/cost-item.entity';
 import { CostPayment } from './entities/cost-payment.entity';
@@ -117,35 +117,41 @@ export class CostsService {
     return costItem;
   }
 
+  // Ödeme ve defter kaydı tek transaction içinde yazılır (bkz. PaymentsService.create).
   async createCostPayment(
     contractorId: string,
     costItemId: string,
     dto: CreateCostPaymentDto,
+    externalManager?: EntityManager,
   ): Promise<CostPayment> {
     await this.assertCostItemOwnership(contractorId, costItemId);
 
-    const payment = this.costPaymentRepo.create({
-      costItemId,
-      amount: dto.amount,
-      paymentDate: new Date(dto.paymentDate),
-      paymentMethod: dto.paymentMethod,
-      note: dto.note,
-    });
-    const saved = await this.costPaymentRepo.save(payment);
+    const run = async (manager: EntityManager): Promise<CostPayment> => {
+      const payment = manager.create(CostPayment, {
+        costItemId,
+        amount: dto.amount,
+        paymentDate: new Date(dto.paymentDate),
+        paymentMethod: dto.paymentMethod,
+        note: dto.note,
+      });
+      const saved = await manager.save(payment);
 
-    // Deftere çıkış olarak yazılır; tutar negatif işaretlenir.
-    await this.assetTransactionRepo.save(
-      this.assetTransactionRepo.create({
-        contractorId,
-        transactionType: AssetTransactionType.COST_PAYMENT,
-        amount: -dto.amount,
-        sourceTable: 'cost_payments',
-        sourceId: saved.id,
-        transactionDate: new Date(dto.paymentDate),
-      }),
-    );
+      // Deftere çıkış olarak yazılır; tutar negatif işaretlenir.
+      await manager.save(
+        manager.create(AssetTransaction, {
+          contractorId,
+          transactionType: AssetTransactionType.COST_PAYMENT,
+          amount: -dto.amount,
+          sourceTable: 'cost_payments',
+          sourceId: saved.id,
+          transactionDate: new Date(dto.paymentDate),
+        }),
+      );
 
-    return saved;
+      return saved;
+    };
+
+    return externalManager ? run(externalManager) : this.dataSource.transaction(run);
   }
 
   async getCostItemBalance(

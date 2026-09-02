@@ -20,9 +20,13 @@ Uygulanan akışlar:
 | Tahsilat | Daire bazlı ödeme kaydı, kalan bakiye, tahsilat oranı |
 | Maliyetler | Kategori ve kalem yönetimi, sabit/değişken dağılımı, kısmi ödeme |
 | Nakit akışı | Çek/taksit/kira takvimi, gecikme faizi takibi, faiz tahakkuk geçmişi |
+| Varlıklar | Nakit, emtia ve mülk kayıtları, hareketler, değerleme, kira sözleşmesi |
+| Usta tarafı | Profil, hizmet paketleri (şablondan veya sıfırdan), portfolyo, atanan projeler |
+| Teklif süreci | Proje bağlamlı konuşma, teklif, karşı teklif, kabul/red, açık ilanlar |
+| Arsa sahipleri | Listeleme, ekleme, daireyi kat karşılığı devretme |
+| Bildirim | Okunmamış mesaj, bekleyen teklif ve gecikmiş kayıt rozetleri |
 
-Backend'de hazır olup mobil karşılığı henüz yazılmamış modüller: varlıklar (nakit, mülk,
-kira), usta profili ve hizmet paketleri, teklif/mesajlaşma.
+Backend modüllerinin tamamının mobil karşılığı yazıldı.
 
 ---
 
@@ -103,10 +107,10 @@ src/
 
 - **Token yenileme yok.** Backend token'ı 7 gün geçerli; süre dolduğunda istekler 401
   döner ve hata olarak görünür. Otomatik oturum düşürme eklenmedi.
-- **Tarih girişleri metin alanı.** `YYYY-AA-GG` biçimi elle yazılıyor, tarih seçici yok.
-- **"Arsa sahibine verildi" durumu eksik.** Backend `landOwnerId` bekliyor; arsa
-  sahiplerini listeleyip seçtiren ekran henüz yazılmadı.
 - **Boş katlar çizilmiyor.** Kat kesiti yalnızca içinde daire bulunan katları gösterir.
+- **Push bildirim yok.** Sayaçlar yalnızca uygulama açıkken, ekran odaklandığında
+  tazelenir. Uygulama kapalıyken bildirim gönderilmez; bunun için Expo Go yerine
+  development build ve push altyapısı gerekiyor.
 - **Maliyet kategorileri ortak.** Backend'de kategoriler kullanıcıya bağlı değil; bir
   kullanıcının eklediği kategori diğerlerine de görünür.
 

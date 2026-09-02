@@ -7,9 +7,11 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Switch,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { fetchBlocks } from '../api/units';
+import { updateProjectRequest } from '../api/projects';
 import { Block, Unit } from '../types/unit';
 import { useAuth } from '../context/AuthContext';
 import { colors, spacing, typeScale, fonts, radius } from '../theme/tokens';
@@ -38,6 +40,10 @@ export default function ProjectDetailScreen({ route, navigation }: any) {
   const { user } = useAuth();
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  // İlan durumu proje listesinden gelmediği için yerel olarak tutulur; ekran her
+  // açıldığında route parametresindeki değerle başlatılır.
+  const [isPublic, setIsPublic] = useState<boolean>(route.params.isPublic ?? false);
+  const [isTogglingPublic, setIsTogglingPublic] = useState(false);
 
   async function load() {
     try {
@@ -56,18 +62,51 @@ export default function ProjectDetailScreen({ route, navigation }: any) {
     }, [projectId]),
   );
 
+  // Proje ilana açıldığında ustalar sınırlı bilgiyle görebilir ve teklif görüşmesi
+  // başlatabilir; finansal alanlar paylaşılmaz.
+  async function togglePublic(next: boolean) {
+    setIsTogglingPublic(true);
+    try {
+      await updateProjectRequest(projectId, { isPublic: next });
+      setIsPublic(next);
+    } catch (error) {
+      Alert.alert('Hata', 'İlan durumu güncellenemedi');
+    } finally {
+      setIsTogglingPublic(false);
+    }
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={typeScale.label}>PROJE</Text>
       <Text style={[typeScale.display, styles.title]}>{projectName}</Text>
 
       {user?.role === 'contractor' && (
-        <TouchableOpacity
-          style={styles.costsLink}
-          onPress={() => navigation.navigate('Costs', { projectId, projectName })}
-        >
-          <Text style={styles.costsLinkText}>MALİYETLER →</Text>
-        </TouchableOpacity>
+        <>
+          <TouchableOpacity
+            style={styles.costsLink}
+            onPress={() => navigation.navigate('Costs', { projectId, projectName })}
+          >
+            <Text style={styles.costsLinkText}>MALİYETLER →</Text>
+          </TouchableOpacity>
+
+          <View style={styles.publicToggle}>
+            <View style={{ flex: 1 }}>
+              <Text style={typeScale.label}>USTALARA AÇIK İLAN</Text>
+              <Text style={styles.publicHint}>
+                Açıldığında ustalar projeyi görüp teklif görüşmesi başlatabilir.
+                Maliyet ve satış bilgileri paylaşılmaz.
+              </Text>
+            </View>
+            <Switch
+              value={isPublic}
+              onValueChange={togglePublic}
+              disabled={isTogglingPublic}
+              trackColor={{ false: colors.hairline, true: colors.accent }}
+              thumbColor={colors.paperElevated}
+            />
+          </View>
+        </>
       )}
 
       {isLoading && <ActivityIndicator color={colors.ink} style={{ marginTop: spacing.xl }} />}
@@ -112,7 +151,7 @@ export default function ProjectDetailScreen({ route, navigation }: any) {
                           <TouchableOpacity
                             key={unit.id}
                             style={[styles.unitCell, { borderColor: color, backgroundColor: color + '1A' }]}
-                            onPress={() => navigation.navigate('UnitDetail', { unit })}
+                            onPress={() => navigation.navigate('UnitDetail', { unit, projectId })}
                           >
                             <Text style={[styles.unitCellText, { color }]}>{unit.unitNo}</Text>
                           </TouchableOpacity>
@@ -169,6 +208,17 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   costsLinkText: { fontFamily: fonts.label, fontSize: 12, color: colors.ink, letterSpacing: 0.8 },
+  publicToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.md,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.hairline,
+  },
+  publicHint: { ...typeScale.bodyMuted, fontSize: 12, lineHeight: 16, marginTop: 2 },
   empty: { paddingVertical: spacing.xl },
   blockSection: { marginBottom: spacing.xl },
   blockHeader: {

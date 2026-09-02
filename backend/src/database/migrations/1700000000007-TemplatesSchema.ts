@@ -43,41 +43,41 @@ ALTER TABLE craftsman_service_packages ADD CONSTRAINT fk_package_template
 -- ============================================
 
 INSERT INTO service_package_templates (id, name, category, description) VALUES
-    ('a0000000-0000-0000-0000-000000000001', 'Kaba İnşaat (Kalıp-Demir-Beton)', 'Kaba İnşaat', 'Temelden çatıya taşıyıcı sistem işleri'),
-    ('a0000000-0000-0000-0000-000000000002', 'Sıva-Alçı-Astar', 'İnce İşler', 'Duvar ve tavan sıva, alçı, astar işleri'),
-    ('a0000000-0000-0000-0000-000000000003', 'Su-Doğalgaz-Elektrik Tesisatı', 'Tesisat', 'Kombine mekanik ve elektrik tesisat paketi'),
-    ('a0000000-0000-0000-0000-000000000004', 'Boya-Badana', 'İnce İşler', 'İç/dış cephe boya işleri'),
-    ('a0000000-0000-0000-0000-000000000005', 'Seramik-Fayans-Zemin Kaplama', 'İnce İşler', 'Islak hacim ve zemin kaplama işleri'),
-    ('a0000000-0000-0000-0000-000000000006', 'Isı Yalıtımı (Mantolama)', 'Kaba İnşaat', 'Dış cephe ısı yalıtım sistemi'),
-    ('a0000000-0000-0000-0000-000000000007', 'Çatı İşleri', 'Kaba İnşaat', 'Çatı taşıyıcı sistem ve kaplama'),
-    ('a0000000-0000-0000-0000-000000000008', 'Doğrama (PVC/Alüminyum Pencere-Kapı)', 'İnce İşler', 'Pencere ve kapı doğrama montajı');
+    ('76f4e56a-85d1-4da2-bfc6-b7b42f8d074e', 'Kaba İnşaat (Kalıp-Demir-Beton)', 'Kaba İnşaat', 'Temelden çatıya taşıyıcı sistem işleri'),
+    ('b8210feb-77e8-4f0a-b086-ea4570643586', 'Sıva-Alçı-Astar', 'İnce İşler', 'Duvar ve tavan sıva, alçı, astar işleri'),
+    ('cbdd3d70-e1b4-471f-ac2d-e03c4a854602', 'Su-Doğalgaz-Elektrik Tesisatı', 'Tesisat', 'Kombine mekanik ve elektrik tesisat paketi'),
+    ('0ca08afe-dadf-44fb-8ec5-f7ac17254378', 'Boya-Badana', 'İnce İşler', 'İç/dış cephe boya işleri'),
+    ('6a550b2c-1f27-42e5-a117-aa69dd4dba15', 'Seramik-Fayans-Zemin Kaplama', 'İnce İşler', 'Islak hacim ve zemin kaplama işleri'),
+    ('50218f83-3786-42c2-9611-00234f2b5976', 'Isı Yalıtımı (Mantolama)', 'Kaba İnşaat', 'Dış cephe ısı yalıtım sistemi'),
+    ('2426bf77-f64e-4daf-b6b2-8aa688eef239', 'Çatı İşleri', 'Kaba İnşaat', 'Çatı taşıyıcı sistem ve kaplama'),
+    ('925fd739-603f-460b-9b27-e9c858b169a9', 'Doğrama (PVC/Alüminyum Pencere-Kapı)', 'İnce İşler', 'Pencere ve kapı doğrama montajı');
 
 INSERT INTO service_package_template_items (template_id, item_name, default_price_type, display_order) VALUES
-    ('a0000000-0000-0000-0000-000000000001', 'Kalıp İşçiliği', 'per_m2', 1),
-    ('a0000000-0000-0000-0000-000000000001', 'Demir Bağlama İşçiliği', 'fixed', 2),
-    ('a0000000-0000-0000-0000-000000000001', 'Beton Dökümü İşçiliği', 'per_m2', 3),
+    ('76f4e56a-85d1-4da2-bfc6-b7b42f8d074e', 'Kalıp İşçiliği', 'per_m2', 1),
+    ('76f4e56a-85d1-4da2-bfc6-b7b42f8d074e', 'Demir Bağlama İşçiliği', 'fixed', 2),
+    ('76f4e56a-85d1-4da2-bfc6-b7b42f8d074e', 'Beton Dökümü İşçiliği', 'per_m2', 3),
 
-    ('a0000000-0000-0000-0000-000000000002', 'Kaba Sıva', 'per_m2', 1),
-    ('a0000000-0000-0000-0000-000000000002', 'Alçı (Saten)', 'per_m2', 2),
-    ('a0000000-0000-0000-0000-000000000002', 'Astar', 'per_m2', 3),
+    ('b8210feb-77e8-4f0a-b086-ea4570643586', 'Kaba Sıva', 'per_m2', 1),
+    ('b8210feb-77e8-4f0a-b086-ea4570643586', 'Alçı (Saten)', 'per_m2', 2),
+    ('b8210feb-77e8-4f0a-b086-ea4570643586', 'Astar', 'per_m2', 3),
 
-    ('a0000000-0000-0000-0000-000000000003', 'Su Tesisatı', 'fixed', 1),
-    ('a0000000-0000-0000-0000-000000000003', 'Doğalgaz Tesisatı', 'fixed', 2),
-    ('a0000000-0000-0000-0000-000000000003', 'Elektrik Tesisatı', 'fixed', 3),
+    ('cbdd3d70-e1b4-471f-ac2d-e03c4a854602', 'Su Tesisatı', 'fixed', 1),
+    ('cbdd3d70-e1b4-471f-ac2d-e03c4a854602', 'Doğalgaz Tesisatı', 'fixed', 2),
+    ('cbdd3d70-e1b4-471f-ac2d-e03c4a854602', 'Elektrik Tesisatı', 'fixed', 3),
 
-    ('a0000000-0000-0000-0000-000000000004', 'İç Cephe Boya', 'per_m2', 1),
-    ('a0000000-0000-0000-0000-000000000004', 'Dış Cephe Boya', 'per_m2', 2),
+    ('0ca08afe-dadf-44fb-8ec5-f7ac17254378', 'İç Cephe Boya', 'per_m2', 1),
+    ('0ca08afe-dadf-44fb-8ec5-f7ac17254378', 'Dış Cephe Boya', 'per_m2', 2),
 
-    ('a0000000-0000-0000-0000-000000000005', 'Zemin Seramik/Fayans Döşeme', 'per_m2', 1),
-    ('a0000000-0000-0000-0000-000000000005', 'Islak Hacim İzolasyonu', 'per_m2', 2),
+    ('6a550b2c-1f27-42e5-a117-aa69dd4dba15', 'Zemin Seramik/Fayans Döşeme', 'per_m2', 1),
+    ('6a550b2c-1f27-42e5-a117-aa69dd4dba15', 'Islak Hacim İzolasyonu', 'per_m2', 2),
 
-    ('a0000000-0000-0000-0000-000000000006', 'Mantolama (EPS/Taşyünü)', 'per_m2', 1),
+    ('50218f83-3786-42c2-9611-00234f2b5976', 'Mantolama (EPS/Taşyünü)', 'per_m2', 1),
 
-    ('a0000000-0000-0000-0000-000000000007', 'Çatı Taşıyıcı Sistem (Ahşap/Çelik)', 'per_m2', 1),
-    ('a0000000-0000-0000-0000-000000000007', 'Kiremit/Membran Kaplama', 'per_m2', 2),
+    ('2426bf77-f64e-4daf-b6b2-8aa688eef239', 'Çatı Taşıyıcı Sistem (Ahşap/Çelik)', 'per_m2', 1),
+    ('2426bf77-f64e-4daf-b6b2-8aa688eef239', 'Kiremit/Membran Kaplama', 'per_m2', 2),
 
-    ('a0000000-0000-0000-0000-000000000008', 'Pencere Montajı', 'fixed', 1),
-    ('a0000000-0000-0000-0000-000000000008', 'Kapı Montajı', 'fixed', 2);
+    ('925fd739-603f-460b-9b27-e9c858b169a9', 'Pencere Montajı', 'fixed', 1),
+    ('925fd739-603f-460b-9b27-e9c858b169a9', 'Kapı Montajı', 'fixed', 2);
 
     `);
   }

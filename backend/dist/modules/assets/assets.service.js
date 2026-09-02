@@ -40,12 +40,16 @@ let AssetsService = class AssetsService {
         }
         return asset;
     }
-    async recomputeCashCommodityValue(assetId) {
-        const rows = await this.dataSource.query('SELECT COALESCE(SUM(amount), 0) AS total FROM asset_transactions WHERE asset_id = $1', [assetId]);
-        await this.assetRepo.update(assetId, {
-            currentValue: parseFloat(rows[0].total),
-            valueUpdatedAt: new Date(),
-        });
+    async recomputeCashCommodityValue(assetId, manager) {
+        const runner = manager ?? this.dataSource;
+        const rows = await runner.query('SELECT COALESCE(SUM(amount), 0) AS total FROM asset_transactions WHERE asset_id = $1', [assetId]);
+        const patch = { currentValue: parseFloat(rows[0].total), valueUpdatedAt: new Date() };
+        if (manager) {
+            await manager.update(asset_entity_1.Asset, assetId, patch);
+        }
+        else {
+            await this.assetRepo.update(assetId, patch);
+        }
     }
     async createAsset(contractorId, dto) {
         const asset = this.assetRepo.create({
@@ -79,19 +83,21 @@ let AssetsService = class AssetsService {
     async addManualTransaction(contractorId, assetId, dto) {
         await this.assertAssetOwnership(contractorId, assetId);
         const signedAmount = dto.direction === 'manual_addition' ? dto.amount : -dto.amount;
-        const transaction = this.transactionRepo.create({
-            contractorId,
-            assetId,
-            transactionType: dto.direction === 'manual_addition'
-                ? asset_transaction_entity_1.AssetTransactionType.MANUAL_ADDITION
-                : asset_transaction_entity_1.AssetTransactionType.MANUAL_DEDUCTION,
-            amount: signedAmount,
-            transactionDate: new Date(dto.transactionDate),
-            description: dto.description,
+        return this.dataSource.transaction(async (manager) => {
+            const transaction = manager.create(asset_transaction_entity_1.AssetTransaction, {
+                contractorId,
+                assetId,
+                transactionType: dto.direction === 'manual_addition'
+                    ? asset_transaction_entity_1.AssetTransactionType.MANUAL_ADDITION
+                    : asset_transaction_entity_1.AssetTransactionType.MANUAL_DEDUCTION,
+                amount: signedAmount,
+                transactionDate: new Date(dto.transactionDate),
+                description: dto.description,
+            });
+            const saved = await manager.save(transaction);
+            await this.recomputeCashCommodityValue(assetId, manager);
+            return saved;
         });
-        const saved = await this.transactionRepo.save(transaction);
-        await this.recomputeCashCommodityValue(assetId);
-        return saved;
     }
     async createRental(contractorId, assetId, dto) {
         const asset = await this.assertAssetOwnership(contractorId, assetId);
@@ -120,43 +126,48 @@ let AssetsService = class AssetsService {
         }
         return rental;
     }
-    async addRentalPayment(contractorId, rentalId, dto) {
+    async addRentalPayment(contractorId, rentalId, dto, externalManager) {
         const rental = await this.assertRentalOwnership(contractorId, rentalId);
-        const payment = this.rentalPaymentRepo.create({
-            rentalId,
-            amount: dto.amount,
-            paymentDate: new Date(dto.paymentDate),
-            note: dto.note,
-        });
-        const saved = await this.rentalPaymentRepo.save(payment);
-        await this.transactionRepo.save(this.transactionRepo.create({
-            contractorId,
-            assetId: rental.assetId,
-            transactionType: asset_transaction_entity_1.AssetTransactionType.RENTAL_INCOME,
-            amount: dto.amount,
-            sourceTable: 'rental_payments',
-            sourceId: saved.id,
-            transactionDate: new Date(dto.paymentDate),
-        }));
-        return saved;
+        const run = async (manager) => {
+            const payment = manager.create(rental_payment_entity_1.RentalPayment, {
+                rentalId,
+                amount: dto.amount,
+                paymentDate: new Date(dto.paymentDate),
+                note: dto.note,
+            });
+            const saved = await manager.save(payment);
+            await manager.save(manager.create(asset_transaction_entity_1.AssetTransaction, {
+                contractorId,
+                assetId: rental.assetId,
+                transactionType: asset_transaction_entity_1.AssetTransactionType.RENTAL_INCOME,
+                amount: dto.amount,
+                sourceTable: 'rental_payments',
+                sourceId: saved.id,
+                transactionDate: new Date(dto.paymentDate),
+            }));
+            return saved;
+        };
+        return externalManager ? run(externalManager) : this.dataSource.transaction(run);
     }
     async addValueSnapshot(contractorId, assetId, dto) {
         const asset = await this.assertAssetOwnership(contractorId, assetId);
         if (asset.assetType !== asset_entity_1.AssetType.REAL_ESTATE) {
             throw new common_1.BadRequestException('Değer anlık görüntüsü sadece real_estate tipi varlıklar içindir');
         }
-        const snapshot = this.snapshotRepo.create({
-            assetId,
-            estimatedValue: dto.estimatedValue,
-            snapshotDate: new Date(dto.snapshotDate),
-            source: dto.source,
+        return this.dataSource.transaction(async (manager) => {
+            const snapshot = manager.create(asset_value_snapshot_entity_1.AssetValueSnapshot, {
+                assetId,
+                estimatedValue: dto.estimatedValue,
+                snapshotDate: new Date(dto.snapshotDate),
+                source: dto.source,
+            });
+            const saved = await manager.save(snapshot);
+            await manager.update(asset_entity_1.Asset, assetId, {
+                currentValue: dto.estimatedValue,
+                valueUpdatedAt: new Date(),
+            });
+            return saved;
         });
-        const saved = await this.snapshotRepo.save(snapshot);
-        await this.assetRepo.update(assetId, {
-            currentValue: dto.estimatedValue,
-            valueUpdatedAt: new Date(),
-        });
-        return saved;
     }
 };
 exports.AssetsService = AssetsService;

@@ -1,6 +1,6 @@
 # Müteahhitlik Takip — Backend API
 
-M�teahhitlerin proje, daire, tahsilat, maliyet ve nakit akışı süreçlerini yönettiği
+Müteahhitlerin proje, daire, tahsilat, maliyet ve nakit akışı süreçlerini yönettiği
 uygulamanın sunucu tarafı.
 
 **Stack:** NestJS 10 · TypeScript · PostgreSQL 16 · TypeORM · Passport (JWT)
@@ -12,7 +12,7 @@ uygulamanın sunucu tarafı.
 | Modül | Kapsam |
 |---|---|
 | `auth` | Kayıt, giriş, JWT üretimi ve doğrulaması |
-| `projects` | Proje, arsa ve hisseli arsa sahipleri |
+| `projects` | Proje, arsa, hisseli arsa sahipleri, açık ilan yönetimi |
 | `units` | Blok, daire, alıcı; daire durum yönetimi |
 | `payments` | Daire tahsilatları, kalan bakiye |
 | `costs` | Maliyet kategorileri, kalemler, kısmi ödemeler |
@@ -21,6 +21,7 @@ uygulamanın sunucu tarafı.
 | `craftsmen` | Usta profili, hizmet paketleri, portfolyo, değerlendirmeler, proje atamaları |
 | `messaging` | Proje bağlamlı konuşmalar, teklif ve karşı teklif akışı |
 | `templates` | Hazır hizmet paketi şablonları (salt okunur) |
+| `notifications` | Okunmamış mesaj, bekleyen teklif ve gecikmiş kayıt sayaçları |
 
 ---
 
@@ -45,6 +46,8 @@ npm run start:dev             # http://localhost:3000
 | `JWT_EXPIRES_IN` | Token ömrü (varsayılan `7d`) |
 | `SYSTEM_API_KEY` | Sistem uçlarının `X-API-Key` doğrulaması |
 | `PORT` | Uygulama portu (varsayılan 3000) |
+| `UPLOAD_DIR` | Yüklenen dosyaların klasörü (varsayılan `uploads`) |
+| `PUBLIC_BASE_URL` | Dosya erişim adresi; mobil cihazın ulaşabildiği adres olmalı |
 
 `JWT_SECRET` ve `SYSTEM_API_KEY` üretimde mutlaka değiştirilmeli.
 
@@ -82,9 +85,10 @@ Her modül aynı yapıyı izler. Yeni modül eklerken mevcut bir modül (`paymen
 - **Sistem uçları (`/system/*`):** `ApiKeyGuard`, `X-API-Key` header'ı bekler. Kullanıcı
   oturumu geçerli değildir.
 
-Kaynak sahipliği servis katmanında doğrulanır. Proje sahipliği için `ProjectsService.
-findOneForContractor` ortak giriş noktasıdır; daire, maliyet ve ödeme servisleri
-sahipliği bu zincir üzerinden çözer.
+Kaynak sahipliği servis katmanında doğrulanır. Proje sahipliği için
+`ProjectsService.findOneForContractor` ortak giriş noktasıdır; daire, maliyet ve ödeme
+servisleri sahipliği bu zincir üzerinden çözer. Alıcı ve arsa sahibi kayıtları da
+kullanılmadan önce hesap bazında doğrulanır.
 
 ### Şema yönetimi
 
@@ -98,6 +102,41 @@ npm run migration:revert    # son migration'ı geri al
 ```
 
 Migration'ların `down()` metotları yazılmadı; geri alma elle yapılmalıdır.
+
+### Transaction kullanımı
+
+Birden fazla tabloya yazan işlemler tek transaction içinde yürütülür; ara adımlardan
+biri başarısız olursa tamamı geri alınır:
+
+| İşlem | Birlikte yazılanlar |
+|---|---|
+| Proje oluşturma | `projects` + `land` + `land_owners` |
+| Daire tahsilatı | `payments` + `asset_transactions` |
+| Maliyet ödemesi | `cost_payments` + `asset_transactions` |
+| Varlık hareketi | `asset_transactions` + `assets.current_value` |
+| Değerleme kaydı | `asset_value_snapshots` + `assets.current_value` |
+| Kira tahsilatı | `rental_payments` + `asset_transactions` |
+| Takvim kaydı kapatma | ilgili gerçekleşen kayıt + `cashflow_calendar.status` |
+| Faiz tahakkuku | `cashflow_interest_accruals` + `cashflow_calendar.current_amount` |
+
+Başka bir işlemin parçası olarak çağrılabilen servis metotları (`PaymentsService.create`,
+`AssetsService.addRentalPayment`) son parametre olarak `EntityManager` alır. Değer
+verildiğinde çağıranın transaction'ı kullanılır, verilmediğinde metot kendi
+transaction'ını açar. `CashflowService.markAsPaid` bu mekanizmayla üç farklı yolu tek
+işlem altında toplar.
+
+### Dosya yükleme
+
+Görseller `multipart/form-data` ile alınır, `StorageService` tarafından diske yazılır ve
+erişim adresi ilgili kayda işlenir. Dosyalar `/uploads` altından statik olarak sunulur.
+
+- Kabul edilen biçimler: JPEG, PNG, WEBP, HEIC. Kontrol hem MIME tipine hem uzantıya bakar.
+- Boyut sınırı 8 MB; istek gövdesi seviyesinde ve servis içinde ayrı ayrı denetlenir.
+- Dosya adı sunucuda UUID ile üretilir; istemciden gelen ad kullanılmaz.
+- Kayıt oluşturulamazsa yazılan dosya silinir, kayıt silinirse dosya da temizlenir.
+
+`PUBLIC_BASE_URL` mobil cihazın erişebildiği adres olmalıdır; `localhost` bırakılırsa
+üretilen adresler cihazdan açılamaz.
 
 ### Hesaplanan değerler
 
@@ -113,8 +152,8 @@ Bakiye ve toplam gibi türetilmiş değerler kolonda tutulmaz, view'lardan okunu
 View'lar repository ile eşlenmez; parametreli ham sorgu ile okunur. Dönen alanlar
 snake_case, sayısal değerler string'dir.
 
-İstisna: `assets.currentValue` ve `craftsmanProfile.averageRating` performans nedeniyle
-kolonda tutulur ve ilgili servis tarafından yeniden hesaplanır.
+İstisna: `assets.current_value` ve `craftsman_profiles.average_rating` performans
+nedeniyle kolonda tutulur ve ilgili servis tarafından yeniden hesaplanır.
 
 ---
 
@@ -140,9 +179,6 @@ birden çok kez çalıştırılabilir.
   token içinden okunduğundan, rol değişikliği eski token süresi dolana kadar yansımaz.
 - **Hız sınırı ve zamanlayıcı tek instance varsayar.** Throttler sayacı bellekte tutulur;
   zamanlanmış iş her instance'ta tetiklenir. Yatay ölçekleme için ortak store ve kilit gerekir.
-- **Bazı yazma işlemleri transaction dışında.** Ödeme kaydı ile defter kaydı ayrı
-  işlemlerde yazılıyor (`PaymentsService.create`, `CostsService.createCostPayment`);
-  ikincisi başarısız olursa defter eksik kalır.
 - **Maliyet kategorileri hesaplar arasında ortak.** `cost_categories` tablosunda
   `contractor_id` yok.
 - **`asset_transactions` referansları polimorfik.** `sourceTable` + `sourceId` çifti
@@ -150,7 +186,11 @@ birden çok kez çalıştırılabilir.
 - **Değerlendirme doğrulaması kısmi.** `projectId` gönderilmezse ustayla çalışılmış olma
   koşulu kontrol edilmiyor.
 - **CORS tüm kaynaklara açık.** Üretimde kısıtlanmalı.
-- **Dosya yükleme yok.** Portfolyo görselleri dış URL olarak saklanıyor.
+- **Yüklenen dosyalar yerel diskte.** Tek sunuculu kurulum varsayılır; birden fazla
+  instance çalıştırıldığında dosyalar örnekler arasında paylaşılmaz. Ortak depolamaya
+  (S3 / R2 / MinIO) geçiş `StorageService` içinde yapılabilir.
+- **Yüklenen dosyalar kimlik doğrulaması olmadan erişilebilir.** Adresler rastgele UUID
+  içerdiği için tahmin edilemez, ancak adresi bilen herkes görüntüleyebilir.
 
 ## Uçlar
 

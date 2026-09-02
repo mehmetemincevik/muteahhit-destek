@@ -4,6 +4,7 @@ import { createPaymentRequest } from '../api/payments';
 import { PaymentMethod } from '../types/payment';
 import { Button } from '../components/Button';
 import { TextField } from '../components/TextField';
+import { DateField } from '../components/DateField';
 import { colors, spacing, typeScale, fonts, radius } from '../theme/tokens';
 import { parseAmount } from '../utils/format';
 
@@ -33,11 +34,8 @@ export default function CreatePaymentScreen({ route, navigation }: any) {
       Alert.alert('Geçersiz tutar', 'Sıfırdan büyük bir tutar gir');
       return;
     }
-    // Backend IsDateString doğrulaması yapıyor; biçim burada da kontrol edilerek
-    // sunucudan dönen teknik hata mesajı yerine okunur uyarı gösteriliyor.
-    // TODO: Metin girişi yerine tarih seçici bileşen kullanılmalı.
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(paymentDate)) {
-      Alert.alert('Geçersiz tarih', 'Tarihi YYYY-AA-GG şeklinde gir (örn. 2026-03-15)');
+    if (!paymentDate) {
+      Alert.alert('Eksik bilgi', 'Ödeme tarihi seçin');
       return;
     }
 
@@ -71,12 +69,7 @@ export default function CreatePaymentScreen({ route, navigation }: any) {
         placeholder="örn. 250000"
       />
 
-      <TextField
-        label="Ödeme Tarihi *"
-        value={paymentDate}
-        onChangeText={setPaymentDate}
-        placeholder="YYYY-AA-GG"
-      />
+      <DateField label="Ödeme Tarihi *" value={paymentDate} onChange={setPaymentDate} />
 
       <Text style={[typeScale.label, { marginBottom: spacing.sm }]}>ÖDEME YÖNTEMİ</Text>
       <View style={styles.methodRow}>
